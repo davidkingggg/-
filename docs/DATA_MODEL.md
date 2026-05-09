@@ -76,6 +76,8 @@
 ## 6.5 报价单表：QuoteSheet
 用于记录一次报价来源。
 - `id`: 主键
+- `quoteNumber`: 报价单编号（可空，唯一；用于 CSV 导入时按编号合并明细）
+- `title`: 报价单名称（可空；用于显示标识）
 - `supplierId`: 供应商
 - `categoryId`: 品类
 - `quoteDate`: 报价日期
@@ -267,6 +269,8 @@
 - `filePath`: 文件的本地绝对或相对路径
 - `fileType`: 文件类型/扩展名
 - `notes`: 附件说明
+- `isArchived`: 是否已归档
+- `archivedAt`: 归档时间
 - `createdAt`: 创建时间
 
 ## 15. 风险标签表：RiskTag & SupplierRiskTag

@@ -326,10 +326,62 @@ export default function SupplierDetailPage() {
         </div>
       )}
 
-      {/* Tab 3-5: 占位 */}
-      {activeTab === 3 && <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">报价模块开发中，将在第 3 阶段实现</div>}
+      {/* Tab 3: 关联报价 */}
+      {activeTab === 3 && <SupplierQuotesTab supplierId={id} />}
       {activeTab === 4 && <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">评分与考察模块开发中，将在第 5 阶段实现</div>}
       {activeTab === 5 && <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">采购记录模块开发中，将在第 6 阶段实现</div>}
+    </div>
+  )
+}
+
+function SupplierQuotesTab({ supplierId }: { supplierId: string }) {
+  const router = useRouter()
+  const [quotes, setQuotes] = useState<{ id: string; quoteNumber: string | null; title: string | null; quoteDate: string; quoteStage: string | null; category: { name: string }; items: { id: string }[] }[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(`/api/quotes?supplierId=${supplierId}`)
+      .then(r => r.json())
+      .then(setQuotes)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [supplierId])
+
+  if (loading) return <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">加载中...</div>
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <h2 className="text-lg font-semibold text-gray-800 mb-4">关联报价单</h2>
+      {quotes.length === 0 ? (
+        <div className="text-gray-400 text-center py-8">暂无关联报价</div>
+      ) : (
+        <table className="w-full text-sm">
+          <thead><tr className="bg-gray-50 border-b">
+            <th className="text-left px-4 py-3 font-semibold text-gray-600">编号</th>
+            <th className="text-left px-4 py-3 font-semibold text-gray-600">名称</th>
+            <th className="text-left px-4 py-3 font-semibold text-gray-600">品类</th>
+            <th className="text-left px-4 py-3 font-semibold text-gray-600">报价日期</th>
+            <th className="text-left px-4 py-3 font-semibold text-gray-600">阶段</th>
+            <th className="text-center px-4 py-3 font-semibold text-gray-600">明细数</th>
+            <th className="text-right px-4 py-3 font-semibold text-gray-600">操作</th>
+          </tr></thead>
+          <tbody>
+            {quotes.map(q => (
+              <tr key={q.id} className="border-b border-gray-50 hover:bg-blue-50/30 transition-colors">
+                <td className="px-4 py-3 font-mono text-xs text-gray-500">{q.quoteNumber || '-'}</td>
+                <td className="px-4 py-3 font-medium">{q.title || '报价'}</td>
+                <td className="px-4 py-3 text-gray-600">{q.category.name}</td>
+                <td className="px-4 py-3 text-gray-600">{new Date(q.quoteDate).toLocaleDateString('zh-CN')}</td>
+                <td className="px-4 py-3">{q.quoteStage || '-'}</td>
+                <td className="px-4 py-3 text-center">{q.items.length}</td>
+                <td className="px-4 py-3 text-right">
+                  <button onClick={() => router.push(`/quotes/${q.id}`)} className="text-blue-600 hover:text-blue-800 text-xs font-medium">查看详情</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   )
 }

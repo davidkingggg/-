@@ -129,6 +129,89 @@ async function main() {
     }
   }
 
+  // 8. QuoteSheet (findFirst by quoteNumber 保证幂等)
+  const quotesData = [
+    { quoteNumber: 'QS-2026-001', title: '杭州某阀门厂 阀门初次报价', supplierName: '杭州某阀门厂', categoryName: '阀门', quoteDate: '2026-04-15', sourceType: 'PDF', quoteStage: '初次报价' },
+    { quoteNumber: 'QS-2026-002', title: '无锡某管件厂 管件报价', supplierName: '无锡某管件厂', categoryName: '管件', quoteDate: '2026-04-20', sourceType: 'Excel', quoteStage: '初次报价' },
+    { quoteNumber: 'QS-2026-003', title: '常州某辅机制造 锅炉辅机二次议价', supplierName: '常州某辅机制造', categoryName: '锅炉辅机', quoteDate: '2026-05-01', sourceType: '微信', quoteStage: '二次议价' },
+  ]
+  const quoteSheetIds: Record<string, string> = {}
+  for (const q of quotesData) {
+    let qs = await prisma.quoteSheet.findFirst({ where: { quoteNumber: q.quoteNumber } })
+    if (!qs) {
+      qs = await prisma.quoteSheet.create({
+        data: {
+          quoteNumber: q.quoteNumber,
+          title: q.title,
+          supplierId: supplierIds[q.supplierName],
+          categoryId: categoryIds[q.categoryName],
+          quoteDate: new Date(q.quoteDate + 'T00:00:00.000Z'),
+          sourceType: q.sourceType,
+          quoteStage: q.quoteStage,
+        },
+      })
+    }
+    quoteSheetIds[q.quoteNumber] = qs.id
+  }
+
+  // 9. QuoteItem
+  const quoteItemsData = [
+    { sheetNum: 'QS-2026-001', productName: 'DN50法兰球阀', compareKey: '阀门-DN50-法兰球阀', model: 'Q41F-16C DN50', unit: '个', price: 285, includesTax: true, taxRate: 0.13, deliveryTime: '7天', warranty: '1年' },
+    { sheetNum: 'QS-2026-001', productName: 'DN80蝶阀', compareKey: '阀门-DN80-蝶阀', model: 'D71X-16 DN80', unit: '个', price: 180, includesTax: true, taxRate: 0.13, deliveryTime: '7天', warranty: '1年' },
+    { sheetNum: 'QS-2026-001', productName: 'DN100截止阀', compareKey: '阀门-DN100-截止阀', model: 'J41H-16C DN100', unit: '个', price: 520, includesTax: true, taxRate: 0.13, deliveryTime: '10天', warranty: '1年' },
+    { sheetNum: 'QS-2026-002', productName: 'DN50无缝弯头', compareKey: '管件-DN50-弯头', model: '90°弯头 DN50 SCH40', unit: '个', price: 28, includesTax: false, deliveryTime: '3天' },
+    { sheetNum: 'QS-2026-002', productName: 'DN80法兰', compareKey: '管件-DN80-法兰', model: 'HG/T20592 DN80 PN16', unit: '片', price: 45, includesTax: false, deliveryTime: '3天' },
+    { sheetNum: 'QS-2026-003', productName: '除氧器', compareKey: '辅机-除氧器', model: 'HCY-10', unit: '台', price: 32000, includesTax: true, taxRate: 0.13, deliveryTime: '30天', warranty: '2年', paymentTerms: '预付30%，到货验收付70%' },
+    { sheetNum: 'QS-2026-003', productName: '连续排污扩容器', compareKey: '辅机-排污扩容器', model: 'LP-6', unit: '台', price: 18500, includesTax: true, taxRate: 0.13, deliveryTime: '25天', warranty: '2年' },
+  ]
+  for (const qi of quoteItemsData) {
+    const sheetId = quoteSheetIds[qi.sheetNum]
+    if (!sheetId) continue
+    const sheet = await prisma.quoteSheet.findUnique({ where: { id: sheetId } })
+    if (!sheet) continue
+    const existing = await prisma.quoteItem.findFirst({ where: { quoteSheetId: sheetId, productName: qi.productName } })
+    if (!existing) {
+      await prisma.quoteItem.create({
+        data: {
+          quoteSheetId: sheetId,
+          supplierId: sheet.supplierId,
+          categoryId: sheet.categoryId,
+          compareKey: qi.compareKey,
+          productName: qi.productName,
+          model: qi.model || null,
+          unit: qi.unit || null,
+          price: qi.price,
+          includesTax: qi.includesTax ?? false,
+          taxRate: qi.taxRate ?? null,
+          includesFreight: false,
+          deliveryTime: qi.deliveryTime || null,
+          paymentTerms: qi.paymentTerms || null,
+          warranty: qi.warranty || null,
+        },
+      })
+    }
+  }
+
+  // 10. Attachment (报价单附件示例)
+  const attachmentsData = [
+    { sheetNum: 'QS-2026-001', filePath: 'D:/采购资料/报价/杭州某阀门厂_阀门报价_2026.pdf', notes: '初次报价PDF' },
+    { sheetNum: 'QS-2026-002', filePath: 'D:/采购资料/报价/无锡某管件厂_管件报价单.xlsx', notes: 'Excel报价表' },
+  ]
+  for (const att of attachmentsData) {
+    const sheetId = quoteSheetIds[att.sheetNum]
+    if (!sheetId) continue
+    const existing = await prisma.attachment.findFirst({ where: { relatedType: 'QuoteSheet', relatedId: sheetId, filePath: att.filePath } })
+    if (!existing) {
+      const parts = att.filePath.replace(/\\/g, '/').split('/')
+      const fileName = parts[parts.length - 1]
+      const dotIdx = fileName.lastIndexOf('.')
+      const fileType = dotIdx !== -1 ? fileName.slice(dotIdx + 1).toLowerCase() : ''
+      await prisma.attachment.create({
+        data: { relatedType: 'QuoteSheet', relatedId: sheetId, filePath: att.filePath, fileName, fileType, notes: att.notes },
+      })
+    }
+  }
+
   console.log('Seed completed successfully.')
 }
 
