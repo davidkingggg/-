@@ -68,7 +68,90 @@ async function main() {
     categoryIds[c.name] = cat.id
   }
 
-  // 5. Supplier (findFirst by name 保证幂等)
+  // 5. SalesMaterial (findFirst by title+categoryId+targetAudience 保证幂等)
+  const salesMaterialsData = [
+    {
+      title: '阀门客户沟通资料',
+      categoryName: '阀门',
+      targetAudience: '销售部门',
+      coreSellingPoints: '常用品类标准化程度高，适合在客户询价早期快速说明配置口径。',
+      priceAdvantage: '常规规格可按批量需求形成更稳定的商务报价空间。',
+      supplierAdvantage: '可围绕交付、资质、售后响应形成清晰的商务支撑材料。',
+      qualificationSupport: '可提供营业执照、产品合格证明和常规检测资料说明。',
+      deliveryAdvantage: '常用规格供货节奏清晰，便于销售向客户说明预计交付周期。',
+      afterSalesAdvantage: '标准件售后边界明确，便于客户理解更换和响应方式。',
+      riskNotice: '特殊材质、特殊压力等级需单独确认技术参数后再对外承诺。',
+      formalText: '针对阀门类客户沟通，可重点说明标准化程度、常用规格交付节奏和资质资料完整性。特殊材质、压力等级和连接方式需在正式报价前完成参数确认。',
+    },
+    {
+      title: '水泵商务报价说明',
+      categoryName: '水泵',
+      targetAudience: '商务总助',
+      coreSellingPoints: '适合在报价说明中突出性能参数、交付周期和售后响应。',
+      priceAdvantage: '可按功率、流量、扬程等参数拆分报价依据，便于商务解释价格差异。',
+      supplierAdvantage: '成熟型号资料较完整，便于形成规范的对外说明。',
+      qualificationSupport: '可整理产品说明、合格证明和基础参数表作为报价附件说明。',
+      deliveryAdvantage: '常规型号交付周期可预估，非标型号需单独确认。',
+      afterSalesAdvantage: '可说明安装调试配合、易损件更换和售后响应口径。',
+      riskNotice: '选型参数不完整时，不建议直接对客户确认最终价格和交期。',
+      formalText: '',
+    },
+    {
+      title: '电控柜安装公司支持话术',
+      categoryName: '电控柜',
+      targetAudience: '安装公司',
+      coreSellingPoints: '重点说明柜体配置、现场接线配合和调试支持边界。',
+      priceAdvantage: '标准配置与非标配置分开说明，减少现场沟通误差。',
+      supplierAdvantage: '可围绕图纸确认、生产排期和调试配合形成对外支持口径。',
+      qualificationSupport: '可提供基础电气资料和必要的产品证明说明。',
+      deliveryAdvantage: '图纸确认越早，排产和现场衔接越稳定。',
+      afterSalesAdvantage: '现场问题按接线、调试、元器件三类描述响应方式。',
+      riskNotice: '图纸、点位和现场条件未确认前，不对安装时间作绝对承诺。',
+      formalText: '',
+    },
+    {
+      title: '锅炉辅机客户正式说明',
+      categoryName: '锅炉辅机',
+      targetAudience: '客户',
+      coreSellingPoints: '围绕系统匹配、运行稳定性和后续维护便利性进行说明。',
+      priceAdvantage: '可根据配置差异解释价格组成，避免客户只按单价比较。',
+      supplierAdvantage: '成熟辅机方案便于和锅炉系统整体匹配。',
+      qualificationSupport: '可根据客户需求整理产品资质和参数资料。',
+      deliveryAdvantage: '常规辅机可结合项目节点安排交付说明。',
+      afterSalesAdvantage: '后续维护和备件支持可形成明确沟通口径。',
+      riskNotice: '系统匹配参数变化会影响配置、价格和交期。',
+      formalText: '',
+    },
+  ]
+
+  for (const material of salesMaterialsData) {
+    const categoryId = categoryIds[material.categoryName]
+    if (!categoryId) continue
+
+    const existing = await prisma.salesMaterial.findFirst({
+      where: {
+        title: material.title,
+        categoryId,
+        targetAudience: material.targetAudience,
+      },
+    })
+    const { categoryName, ...rest } = material
+    void categoryName
+    const data = {
+      ...rest,
+      categoryId,
+      isArchived: false,
+      archivedAt: null,
+    }
+
+    if (existing) {
+      await prisma.salesMaterial.update({ where: { id: existing.id }, data })
+    } else {
+      await prisma.salesMaterial.create({ data })
+    }
+  }
+
+  // 6. Supplier (findFirst by name 保证幂等)
   const suppliersData = [
     { name: '杭州某阀门厂', categoryName: '阀门', region: '浙江杭州', companyType: '厂家', source: '展会', priceLevel: '中', recommendedLevel: 'A优先推荐', cooperationWillingness: '强', hasQuoted: true, hasVisited: true },
     { name: '上海某水泵公司', categoryName: '水泵', region: '上海', companyType: '代理商', source: '网络', priceLevel: '高', recommendedLevel: 'B备选', cooperationWillingness: '一般', hasQuoted: true, hasVisited: false },
@@ -89,7 +172,7 @@ async function main() {
     supplierIds[s.name] = sup.id
   }
 
-  // 6. SupplierContact (findFirst by supplierId+name 保证幂等)
+  // 7. SupplierContact (findFirst by supplierId+name 保证幂等)
   const contactsData = [
     { supplierName: '杭州某阀门厂', name: '李经理', position: '销售经理', phone: '13900001001', isPrimary: true },
     { supplierName: '杭州某阀门厂', name: '张工', position: '技术支持', phone: '13900001002', isPrimary: false },
@@ -109,7 +192,7 @@ async function main() {
     }
   }
 
-  // 7. SupplierRiskTag (check before create 保证幂等)
+  // 8. SupplierRiskTag (check before create 保证幂等)
   const riskBindings = [
     { supplierName: '上海某水泵公司', tagName: '价格偏高' },
     { supplierName: '广州某保温材料', tagName: '配合度低' },
@@ -129,7 +212,7 @@ async function main() {
     }
   }
 
-  // 8. QuoteSheet (findFirst by quoteNumber 保证幂等)
+  // 9. QuoteSheet (findFirst by quoteNumber 保证幂等)
   const quotesData = [
     { quoteNumber: 'QS-2026-001', title: '杭州某阀门厂 阀门初次报价', supplierName: '杭州某阀门厂', categoryName: '阀门', quoteDate: '2026-04-15', sourceType: 'PDF', quoteStage: '初次报价' },
     { quoteNumber: 'QS-2026-002', title: '无锡某管件厂 管件报价', supplierName: '无锡某管件厂', categoryName: '管件', quoteDate: '2026-04-20', sourceType: 'Excel', quoteStage: '初次报价' },
@@ -154,7 +237,7 @@ async function main() {
     quoteSheetIds[q.quoteNumber] = qs.id
   }
 
-  // 9. QuoteItem
+  // 10. QuoteItem
   const quoteItemsData = [
     { sheetNum: 'QS-2026-001', productName: 'DN50法兰球阀', compareKey: '阀门-DN50-法兰球阀', model: 'Q41F-16C DN50', unit: '个', price: 285, includesTax: true, taxRate: 0.13, deliveryTime: '7天', warranty: '1年' },
     { sheetNum: 'QS-2026-001', productName: 'DN80蝶阀', compareKey: '阀门-DN80-蝶阀', model: 'D71X-16 DN80', unit: '个', price: 180, includesTax: true, taxRate: 0.13, deliveryTime: '7天', warranty: '1年' },
@@ -192,7 +275,7 @@ async function main() {
     }
   }
 
-  // 10. Attachment (报价单附件示例)
+  // 11. Attachment (报价单附件示例)
   const attachmentsData = [
     { sheetNum: 'QS-2026-001', filePath: 'D:/采购资料/报价/杭州某阀门厂_阀门报价_2026.pdf', notes: '初次报价PDF' },
     { sheetNum: 'QS-2026-002', filePath: 'D:/采购资料/报价/无锡某管件厂_管件报价单.xlsx', notes: 'Excel报价表' },
@@ -212,7 +295,7 @@ async function main() {
     }
   }
 
-  // 11. SupplierScore
+  // 12. SupplierScore
   const scorer = await prisma.person.findFirst({ where: { name: '李总助' } })
   if (scorer) {
     const scoresData = [
@@ -255,7 +338,7 @@ async function main() {
     }
   }
 
-  // 12. InvestigationRecord
+  // 13. InvestigationRecord
   const investigationsData = [
     { supplierName: '杭州某阀门厂', type: '实地考察', date: '2026-04-10', keyPoints: '厂房面积大，自动化设备多，现货充足', recommendFollowUp: true },
     { supplierName: '上海某水泵公司', type: '线上沟通', date: '2026-04-12', keyPoints: '价格太硬，不肯让步，账期也有要求', recommendFollowUp: true },
@@ -280,7 +363,7 @@ async function main() {
     }
   }
 
-  // 13. SupplierDevelopmentProcess
+  // 14. SupplierDevelopmentProcess
   const devProcessesData = [
     { supplierName: '北京某仪表科技', currentStage: '初步沟通', ownerName: '王销售', priority: '高', dueDate: '2026-05-20', currentProblem: '对方要求提供详细的参数表', status: '进行中' },
     { supplierName: '苏州某电气设备', currentStage: '内部评审', ownerName: '李总助', priority: '中', needBossDecision: true, status: '进行中' },
@@ -313,7 +396,7 @@ async function main() {
     }
   }
 
-  // 14. PurchaseExecutionProcess
+  // 15. PurchaseExecutionProcess
   const purProcessesData = [
     { title: '无锡管件批量采购', supplierName: '无锡某管件厂', currentStage: '合同签订', requesterName: '陈采购', ownerName: '刘商务', priority: '高', purchaseAmount: 45000, status: '进行中' },
     { title: '杭州阀门样品采购', supplierName: '杭州某阀门厂', currentStage: '供应商备货/发货', requesterName: '赵工程师', ownerName: '王销售', purchaseAmount: 2000, status: '进行中' },
@@ -347,7 +430,7 @@ async function main() {
     }
   }
 
-  // 15. Phase 7A task center demo data (idempotent, dates move with the current week)
+  // 16. Phase 7A task center demo data (idempotent, dates move with the current week)
   const startOfToday = new Date()
   startOfToday.setHours(0, 0, 0, 0)
 
