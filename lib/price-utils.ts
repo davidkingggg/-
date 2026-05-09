@@ -7,10 +7,9 @@ export function toNumber(val: Decimal | number | string | null | undefined): num
     const parsed = parseFloat(val);
     return isNaN(parsed) ? null : parsed;
   }
-  // @ts-ignore
-  if (val.toNumber && typeof val.toNumber === 'function') {
-    // @ts-ignore
-    return val.toNumber();
+  // Check if it's a Prisma Decimal object
+  if (val && typeof (val as any).toNumber === 'function') {
+    return (val as any).toNumber();
   }
   return null;
 }

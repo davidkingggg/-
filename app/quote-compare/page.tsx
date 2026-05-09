@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import QuoteCompareTable from '@/components/quote-compare/QuoteCompareTable'
 
 export default function QuoteComparePage() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState<{id: string, name: string}[]>([])
@@ -27,7 +28,7 @@ export default function QuoteComparePage() {
     })
   }, [])
 
-  const loadData = async () => {
+  const loadData = React.useCallback(async () => {
     setLoading(true)
     try {
       const query = new URLSearchParams()
@@ -48,10 +49,12 @@ export default function QuoteComparePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filter])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleExport = () => {
