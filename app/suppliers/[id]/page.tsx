@@ -328,7 +328,7 @@ export default function SupplierDetailPage() {
 
       {/* Tab 3: 关联报价 */}
       {activeTab === 3 && <SupplierQuotesTab supplierId={id} />}
-      {activeTab === 4 && <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">评分与考察模块开发中，将在第 5 阶段实现</div>}
+      {activeTab === 4 && <SupplierScoresAndInvestigationsTab supplier={supplier} />}
       {activeTab === 5 && <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">采购记录模块开发中，将在第 6 阶段实现</div>}
     </div>
   )
@@ -382,6 +382,123 @@ function SupplierQuotesTab({ supplierId }: { supplierId: string }) {
           </tbody>
         </table>
       )}
+    </div>
+  )
+}
+
+interface TabScore {
+  id: string; scoreDate: string; totalScore: number; finalLevel: string;
+  categoryId: string; scorer?: { name: string };
+}
+interface TabInvestigation {
+  id: string; date: string; type: string; keyPoints: string | null; recommendFollowUp: boolean;
+}
+
+function SupplierScoresAndInvestigationsTab({ supplier }: { supplier: Supplier }) {
+  const router = useRouter()
+  const [scores, setScores] = useState<TabScore[]>([])
+  const [investigations, setInvestigations] = useState<TabInvestigation[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    Promise.all([
+      fetch(`/api/scores?supplierId=${supplier.id}`).then(r => r.json()),
+      fetch(`/api/investigations?supplierId=${supplier.id}`).then(r => r.json())
+    ]).then(([sc, inv]) => {
+      setScores(sc)
+      setInvestigations(inv)
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [supplier.id])
+
+  if (loading) return <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">加载中...</div>
+
+  const latestScore = scores.length > 0 ? scores[0] : null;
+
+  return (
+    <div className="space-y-6">
+      {/* 评分摘要区 */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold text-gray-800">最新评分摘要</h2>
+          <button 
+            onClick={() => router.push(`/scores/new?supplierId=${supplier.id}&categoryId=${supplier.categoryId}`)}
+            className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+          >
+            + 新建评分
+          </button>
+        </div>
+        
+        {latestScore ? (
+          <div className="grid grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div>
+              <div className="text-sm text-gray-500 mb-1">最后评分时间</div>
+              <div className="font-medium text-gray-800">{new Date(latestScore.scoreDate).toLocaleDateString()}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500 mb-1">总分</div>
+              <div className="text-2xl font-bold text-blue-600">{Number(latestScore.totalScore).toFixed(1)}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500 mb-1">最终等级</div>
+              <div className="text-2xl font-bold text-emerald-600">{latestScore.finalLevel}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500 mb-1">评分人</div>
+              <div className="font-medium text-gray-800">{latestScore.scorer?.name || '-'}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-gray-400 text-center py-8 bg-gray-50 rounded-lg border border-gray-200 border-dashed">暂无评分记录</div>
+        )}
+      </div>
+
+      {/* 历史记录区两列 */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* 历史评分 */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-base font-semibold text-gray-800 mb-4">历史评分记录</h2>
+          {scores.length === 0 ? <div className="text-gray-400 text-sm">暂无记录</div> : (
+            <div className="space-y-3">
+              {scores.map(s => (
+                <div key={s.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50">
+                  <div>
+                    <div className="font-medium text-gray-800 text-sm">{new Date(s.scoreDate).toLocaleDateString()} - {s.finalLevel}</div>
+                    <div className="text-xs text-gray-500 mt-1">总分: {Number(s.totalScore).toFixed(1)} | 评分人: {s.scorer?.name || '-'}</div>
+                  </div>
+                  <button onClick={() => router.push(`/scores/${s.id}/edit`)} className="text-blue-600 text-xs hover:underline">查看/编辑</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 考察记录 */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-base font-semibold text-gray-800">调研/考察记录</h2>
+            <button 
+              onClick={() => router.push(`/investigations`)}
+              className="text-blue-600 text-xs hover:underline"
+            >
+              前往考察模块管理
+            </button>
+          </div>
+          {investigations.length === 0 ? <div className="text-gray-400 text-sm">暂无记录</div> : (
+            <div className="space-y-3">
+              {investigations.map(inv => (
+                <div key={inv.id} className="p-3 border rounded-lg hover:bg-gray-50">
+                  <div className="flex justify-between mb-1">
+                    <span className="font-medium text-gray-800 text-sm">{new Date(inv.date).toLocaleDateString()} · {inv.type}</span>
+                    {inv.recommendFollowUp ? <span className="text-emerald-600 text-xs">推荐跟进</span> : <span className="text-gray-400 text-xs">不再跟进</span>}
+                  </div>
+                  <div className="text-xs text-gray-500 truncate" title={inv.keyPoints || ''}>{inv.keyPoints || '无重点记录'}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

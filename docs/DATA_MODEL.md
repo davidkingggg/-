@@ -133,6 +133,8 @@
 - `manualLevel`: 手动调整等级
 - `finalLevel`: 最终等级
 - `scoreReason`: 评分说明
+- `isArchived`: 是否已归档
+- `archivedAt`: 归档时间
 - `createdAt`: 创建时间
 - `updatedAt`: 更新时间
 

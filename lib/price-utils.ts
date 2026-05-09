@@ -8,8 +8,8 @@ export function toNumber(val: Decimal | number | string | null | undefined): num
     return isNaN(parsed) ? null : parsed;
   }
   // Check if it's a Prisma Decimal object
-  if (val && typeof (val as any).toNumber === 'function') {
-    return (val as any).toNumber();
+  if (val && typeof (val as { toNumber?: unknown }).toNumber === 'function') {
+    return (val as { toNumber: () => number }).toNumber();
   }
   return null;
 }

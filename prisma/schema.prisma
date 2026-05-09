@@ -165,6 +165,8 @@ model SupplierScore {
   manualLevel      String?
   finalLevel       String?
   scoreReason      String?
+  isArchived       Boolean  @default(false)
+  archivedAt       DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   scorer           Person   @relation(fields: [scorerId], references: [id])

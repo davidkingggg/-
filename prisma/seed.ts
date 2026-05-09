@@ -212,6 +212,74 @@ async function main() {
     }
   }
 
+  // 11. SupplierScore
+  const scorer = await prisma.person.findFirst({ where: { name: '李总助' } })
+  if (scorer) {
+    const scoresData = [
+      { supplierName: '杭州某阀门厂', qualityScore: 23, priceScore: 18, deliveryScore: 14, afterSalesScore: 13, cooperationScore: 9, paymentScore: 8, regionScore: 5 },
+      { supplierName: '上海某水泵公司', qualityScore: 20, priceScore: 12, deliveryScore: 12, afterSalesScore: 10, cooperationScore: 6, paymentScore: 6, regionScore: 4 },
+      { supplierName: '常州某辅机制造', qualityScore: 24, priceScore: 16, deliveryScore: 13, afterSalesScore: 14, cooperationScore: 9, paymentScore: 8, regionScore: 4 },
+    ]
+    for (const sc of scoresData) {
+      const supplierId = supplierIds[sc.supplierName]
+      if (!supplierId) continue
+      const sup = await prisma.supplier.findUnique({ where: { id: supplierId } })
+      if (!sup) continue
+      const existing = await prisma.supplierScore.findFirst({ where: { supplierId } })
+      if (!existing) {
+        const total = sc.qualityScore + sc.priceScore + sc.deliveryScore + sc.afterSalesScore + sc.cooperationScore + sc.paymentScore + sc.regionScore
+        let sysLevel = 'C暂不推荐'
+        if (total >= 85) sysLevel = 'A优先推荐'
+        else if (total >= 70) sysLevel = 'B备选'
+        
+        await prisma.supplierScore.create({
+          data: {
+            supplierId,
+            categoryId: sup.categoryId,
+            scorerId: scorer.id,
+            scoreDate: new Date('2026-05-08T00:00:00Z'),
+            qualityScore: sc.qualityScore,
+            priceScore: sc.priceScore,
+            deliveryScore: sc.deliveryScore,
+            afterSalesScore: sc.afterSalesScore,
+            cooperationScore: sc.cooperationScore,
+            paymentScore: sc.paymentScore,
+            regionScore: sc.regionScore,
+            totalScore: total,
+            systemLevel: sysLevel,
+            finalLevel: sysLevel,
+            scoreReason: '初始化导入打分'
+          }
+        })
+      }
+    }
+  }
+
+  // 12. InvestigationRecord
+  const investigationsData = [
+    { supplierName: '杭州某阀门厂', type: '实地考察', date: '2026-04-10', keyPoints: '厂房面积大，自动化设备多，现货充足', recommendFollowUp: true },
+    { supplierName: '上海某水泵公司', type: '线上沟通', date: '2026-04-12', keyPoints: '价格太硬，不肯让步，账期也有要求', recommendFollowUp: true },
+  ]
+  for (const inv of investigationsData) {
+    const supplierId = supplierIds[inv.supplierName]
+    if (!supplierId) continue
+    const sup = await prisma.supplier.findUnique({ where: { id: supplierId } })
+    if (!sup) continue
+    const existing = await prisma.investigationRecord.findFirst({ where: { supplierId, type: inv.type } })
+    if (!existing) {
+      await prisma.investigationRecord.create({
+        data: {
+          supplierId,
+          categoryId: sup.categoryId,
+          type: inv.type,
+          date: new Date(inv.date + 'T00:00:00Z'),
+          keyPoints: inv.keyPoints,
+          recommendFollowUp: inv.recommendFollowUp
+        }
+      })
+    }
+  }
+
   console.log('Seed completed successfully.')
 }
 

@@ -1,0 +1,195 @@
+'use client'
+
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useToast } from '@/components/ui/Toast'
+
+function NewScoreForm() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { showToast } = useToast()
+
+  const [suppliers, setSuppliers] = useState<{id: string, name: string}[]>([])
+  const [categories, setCategories] = useState<{id: string, name: string}[]>([])
+  const [people, setPeople] = useState<{id: string, name: string}[]>([])
+
+  const [formData, setFormData] = useState({
+    supplierId: searchParams.get('supplierId') || '',
+    categoryId: searchParams.get('categoryId') || '',
+    scorerId: '',
+    scoreDate: new Date().toISOString().slice(0, 10),
+    qualityScore: 0,
+    priceScore: 0,
+    deliveryScore: 0,
+    afterSalesScore: 0,
+    cooperationScore: 0,
+    paymentScore: 0,
+    regionScore: 0,
+    manualLevel: '',
+    scoreReason: ''
+  })
+
+  useEffect(() => {
+    fetch('/api/suppliers').then(r => r.json()).then(setSuppliers).catch(() => {})
+    fetch('/api/categories').then(r => r.json()).then(setCategories).catch(() => {})
+    fetch('/api/people').then(r => r.json()).then(setPeople).catch(() => {})
+  }, [])
+
+  // Auto calculate total and system level
+  const totalScore = 
+    Number(formData.qualityScore || 0) +
+    Number(formData.priceScore || 0) +
+    Number(formData.deliveryScore || 0) +
+    Number(formData.afterSalesScore || 0) +
+    Number(formData.cooperationScore || 0) +
+    Number(formData.paymentScore || 0) +
+    Number(formData.regionScore || 0);
+
+  let systemLevel = 'C暂不推荐'
+  if (totalScore >= 85) systemLevel = 'A优先推荐'
+  else if (totalScore >= 70) systemLevel = 'B备选'
+
+  const finalLevel = formData.manualLevel ? formData.manualLevel : systemLevel
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const res = await fetch('/api/scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '保存失败')
+      
+      showToast('保存成功', 'success')
+      router.push('/scores')
+    } catch (err: unknown) {
+      showToast((err as Error).message, 'error')
+    }
+  }
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto">
+      <div className="mb-6 flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-800">新建供应商评分</h1>
+        <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-700">返回</button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-8">
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">供应商 *</label>
+            <select required name="supplierId" value={formData.supplierId} onChange={handleChange} className="w-full border border-gray-300 rounded-lg p-2.5">
+              <option value="">请选择供应商</option>
+              {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">品类 *</label>
+            <select required name="categoryId" value={formData.categoryId} onChange={handleChange} className="w-full border border-gray-300 rounded-lg p-2.5">
+              <option value="">请选择品类</option>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">评分人 *</label>
+            <select required name="scorerId" value={formData.scorerId} onChange={handleChange} className="w-full border border-gray-300 rounded-lg p-2.5">
+              <option value="">请选择评分人</option>
+              {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">评分日期 *</label>
+            <input required type="date" name="scoreDate" value={formData.scoreDate} onChange={handleChange} className="w-full border border-gray-300 rounded-lg p-2.5" />
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">打分明细</h2>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">产品匹配度 / 质量 (25分)</label>
+              <input type="number" min="0" max="25" step="0.1" name="qualityScore" value={formData.qualityScore} onChange={handleChange} className="w-full border border-gray-300 rounded-lg p-2.5" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">价格竞争力 (20分)</label>
+              <input type="number" min="0" max="20" step="0.1" name="priceScore" value={formData.priceScore} onChange={handleChange} className="w-full border border-gray-300 rounded-lg p-2.5" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">交付能力 (15分)</label>
+              <input type="number" min="0" max="15" step="0.1" name="deliveryScore" value={formData.deliveryScore} onChange={handleChange} className="w-full border border-gray-300 rounded-lg p-2.5" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">售后服务 (15分)</label>
+              <input type="number" min="0" max="15" step="0.1" name="afterSalesScore" value={formData.afterSalesScore} onChange={handleChange} className="w-full border border-gray-300 rounded-lg p-2.5" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">平台合作意愿 (10分)</label>
+              <input type="number" min="0" max="10" step="0.1" name="cooperationScore" value={formData.cooperationScore} onChange={handleChange} className="w-full border border-gray-300 rounded-lg p-2.5" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">账期/付款条件 (10分)</label>
+              <input type="number" min="0" max="10" step="0.1" name="paymentScore" value={formData.paymentScore} onChange={handleChange} className="w-full border border-gray-300 rounded-lg p-2.5" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">区域覆盖能力 (5分)</label>
+              <input type="number" min="0" max="5" step="0.1" name="regionScore" value={formData.regionScore} onChange={handleChange} className="w-full border border-gray-300 rounded-lg p-2.5" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 p-4 rounded-lg flex items-center justify-between border border-gray-200">
+          <div>
+            <span className="text-sm text-gray-500">当前总分</span>
+            <div className="text-2xl font-bold text-blue-600">{totalScore.toFixed(1)} <span className="text-sm font-normal text-gray-500">/ 100</span></div>
+          </div>
+          <div>
+            <span className="text-sm text-gray-500">系统建议等级</span>
+            <div className="text-xl font-bold text-gray-800">{systemLevel}</div>
+          </div>
+          <div>
+            <span className="text-sm text-gray-500">最终采用等级</span>
+            <div className="text-xl font-bold text-emerald-600">{finalLevel}</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">手动调整等级（留空则采用系统等级）</label>
+            <select name="manualLevel" value={formData.manualLevel} onChange={handleChange} className="w-full border border-gray-300 rounded-lg p-2.5">
+              <option value="">-- 不调整 --</option>
+              <option value="A优先推荐">A优先推荐</option>
+              <option value="B备选">B备选</option>
+              <option value="C暂不推荐">C暂不推荐</option>
+              <option value="未评级">未评级</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">评分说明 / 备注</label>
+          <textarea name="scoreReason" value={formData.scoreReason} onChange={handleChange} rows={3} className="w-full border border-gray-300 rounded-lg p-2.5" placeholder="填写评分的依据或额外说明..."></textarea>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <button type="button" onClick={() => router.back()} className="px-5 py-2.5 border rounded-lg text-gray-600 hover:bg-gray-50">取消</button>
+          <button type="submit" className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700">保存评分</button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+export default function NewScorePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewScoreForm />
+    </Suspense>
+  )
+}
