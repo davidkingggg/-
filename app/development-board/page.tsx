@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback, Suspense } from 'react'
+/* eslint-disable react-hooks/set-state-in-effect */
+
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Modal from '@/components/ui/Modal'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
@@ -65,7 +67,7 @@ function DevelopmentBoardContent() {
       const res = await fetch(`/api/development-processes?${params.toString()}`)
       if (!res.ok) throw new Error('Failed to load')
       setItems(await res.json())
-    } catch (e) {
+    } catch {
       showToast('加载数据失败', 'error')
     } finally {
       setLoading(false)
@@ -86,7 +88,7 @@ function DevelopmentBoardContent() {
       if (!res.ok) throw new Error('更新失败')
       showToast('状态更新成功', 'success')
       loadItems()
-    } catch (e) {
+    } catch {
       showToast('状态更新失败', 'error')
     }
   }
@@ -103,7 +105,7 @@ function DevelopmentBoardContent() {
       showToast('归档成功', 'success')
       setArchiveItem(null)
       loadItems()
-    } catch (e) {
+    } catch {
       showToast('归档失败', 'error')
     }
   }

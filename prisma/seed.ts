@@ -347,6 +347,242 @@ async function main() {
     }
   }
 
+  // 15. Phase 7A task center demo data (idempotent, dates move with the current week)
+  const startOfToday = new Date()
+  startOfToday.setHours(0, 0, 0, 0)
+
+  const dayOfWeek = startOfToday.getDay()
+  const monday = new Date(startOfToday)
+  monday.setDate(startOfToday.getDate() + (dayOfWeek === 0 ? -6 : 1 - dayOfWeek))
+
+  const dateFromMonday = (offset: number) => {
+    const date = new Date(monday)
+    date.setDate(monday.getDate() + offset)
+    return date
+  }
+
+  const daysAgo = (offset: number) => {
+    const date = new Date(startOfToday)
+    date.setDate(startOfToday.getDate() - offset)
+    return date
+  }
+
+  const firstCategory = await prisma.category.findFirst({ where: { isArchived: false } })
+  const defaultOwner = await prisma.person.findFirst({ where: { name: '李总助' } }) || await prisma.person.findFirst()
+  const defaultRequester = await prisma.person.findFirst({ where: { name: '陈采购' } }) || defaultOwner
+
+  const ensureDevTask = async (data: {
+    supplierName: string
+    stage: string
+    priority: string
+    dueDate: Date
+    currentProblem: string
+    nextAction: string
+    needBossDecision?: boolean
+    needSalesSupport?: boolean
+  }) => {
+    const supplierId = supplierIds[data.supplierName]
+    if (!supplierId || !defaultOwner) return
+
+    const supplier = await prisma.supplier.findUnique({ where: { id: supplierId } })
+    if (!supplier) return
+
+    const existing = await prisma.supplierDevelopmentProcess.findFirst({
+      where: { supplierId, categoryId: supplier.categoryId, currentStage: data.stage },
+    })
+
+    const taskData = {
+      ownerId: defaultOwner.id,
+      priority: data.priority,
+      dueDate: data.dueDate,
+      currentProblem: data.currentProblem,
+      nextAction: data.nextAction,
+      needBossDecision: data.needBossDecision || false,
+      needSalesSupport: data.needSalesSupport || false,
+      status: '进行中',
+      isArchived: false,
+      archivedAt: null,
+    }
+
+    if (existing) {
+      await prisma.supplierDevelopmentProcess.update({ where: { id: existing.id }, data: taskData })
+    } else {
+      await prisma.supplierDevelopmentProcess.create({
+        data: {
+          supplierId,
+          categoryId: supplier.categoryId,
+          currentStage: data.stage,
+          ...taskData,
+        },
+      })
+    }
+  }
+
+  const ensurePurchaseTask = async (data: {
+    title: string
+    supplierName: string
+    stage: string
+    priority: string
+    dueDate: Date
+    currentProblem: string
+    nextAction: string
+    needBossDecision?: boolean
+  }) => {
+    const supplierId = supplierIds[data.supplierName]
+    if (!supplierId || !defaultOwner || !defaultRequester) return
+
+    const supplier = await prisma.supplier.findUnique({ where: { id: supplierId } })
+    if (!supplier) return
+
+    const existing = await prisma.purchaseExecutionProcess.findFirst({
+      where: { title: data.title, supplierId, categoryId: supplier.categoryId, currentStage: data.stage },
+    })
+
+    const taskData = {
+      requesterId: defaultRequester.id,
+      ownerId: defaultOwner.id,
+      priority: data.priority,
+      dueDate: data.dueDate,
+      currentProblem: data.currentProblem,
+      nextAction: data.nextAction,
+      needBossDecision: data.needBossDecision || false,
+      status: '进行中',
+      isArchived: false,
+      archivedAt: null,
+    }
+
+    if (existing) {
+      await prisma.purchaseExecutionProcess.update({ where: { id: existing.id }, data: taskData })
+    } else {
+      await prisma.purchaseExecutionProcess.create({
+        data: {
+          title: data.title,
+          supplierId,
+          categoryId: supplier.categoryId,
+          currentStage: data.stage,
+          ...taskData,
+        },
+      })
+    }
+  }
+
+  const ensureAdminTask = async (data: {
+    title: string
+    type: string
+    priority: string
+    dueDate: Date
+    status: string
+    notes: string
+  }) => {
+    const existing = await prisma.adminTask.findFirst({ where: { title: data.title, type: data.type } })
+    const taskData = {
+      priority: data.priority,
+      dueDate: data.dueDate,
+      status: data.status,
+      notes: data.notes,
+      completedAt: data.status === '已完成' ? data.dueDate : null,
+      isArchived: false,
+      archivedAt: null,
+    }
+
+    if (existing) {
+      await prisma.adminTask.update({ where: { id: existing.id }, data: taskData })
+    } else {
+      await prisma.adminTask.create({ data: { title: data.title, type: data.type, ...taskData } })
+    }
+  }
+
+  if (firstCategory) {
+    await ensureDevTask({
+      supplierName: '北京某仪表科技',
+      stage: '资料收集',
+      priority: '高',
+      dueDate: dateFromMonday(2),
+      currentProblem: '样本资料还缺少资质扫描件',
+      nextAction: '联系供应商补齐资质材料',
+    })
+    await ensureDevTask({
+      supplierName: '苏州某电气设备',
+      stage: '报价获取',
+      priority: '中',
+      dueDate: daysAgo(2),
+      currentProblem: '报价单迟迟未确认有效期',
+      nextAction: '催促对方确认最终报价',
+    })
+    await ensureDevTask({
+      supplierName: '南京某燃烧器代理',
+      stage: '内部评审',
+      priority: '高',
+      dueDate: dateFromMonday(4),
+      currentProblem: '是否进入备用池需要老板判断',
+      nextAction: '整理对比材料给老板确认',
+      needBossDecision: true,
+    })
+    await ensureDevTask({
+      supplierName: '广州某保温材料',
+      stage: '销售/商务推广',
+      priority: '中',
+      dueDate: dateFromMonday(5),
+      currentProblem: '需要销售反馈客户常用规格',
+      nextAction: '请销售补充客户侧需求',
+      needSalesSupport: true,
+    })
+
+    await ensurePurchaseTask({
+      title: '7A演示-本周采购到货跟进',
+      supplierName: '无锡某管件厂',
+      stage: '供应商备货/发货',
+      priority: '高',
+      dueDate: dateFromMonday(3),
+      currentProblem: '物流单号未同步',
+      nextAction: '确认发货时间和物流信息',
+    })
+    await ensurePurchaseTask({
+      title: '7A演示-超期采购发票跟进',
+      supplierName: '杭州某阀门厂',
+      stage: '发票开具',
+      priority: '中',
+      dueDate: daysAgo(3),
+      currentProblem: '发票开具超期',
+      nextAction: '联系供应商财务补开',
+    })
+    await ensurePurchaseTask({
+      title: '7A演示-老板决策采购付款',
+      supplierName: '常州某辅机制造',
+      stage: '付款申请',
+      priority: '高',
+      dueDate: dateFromMonday(1),
+      currentProblem: '预付款比例高于常规口径',
+      nextAction: '提交老板确认付款安排',
+      needBossDecision: true,
+    })
+
+    await ensureAdminTask({
+      title: '7A演示-本周整理会议纪要',
+      type: '会议',
+      priority: '中',
+      dueDate: dateFromMonday(2),
+      status: '进行中',
+      notes: '整理本周供应商会议纪要',
+    })
+    await ensureAdminTask({
+      title: '7A演示-超期办公室物料补采',
+      type: '办公采购',
+      priority: '高',
+      dueDate: daysAgo(1),
+      status: '未开始',
+      notes: '补采打印纸和文件夹',
+    })
+    await ensureAdminTask({
+      title: '7A演示-已完成行政事项',
+      type: '周报',
+      priority: '低',
+      dueDate: dateFromMonday(0),
+      status: '已完成',
+      notes: '用于验证默认待办不展示已完成事项',
+    })
+  }
+
   console.log('Seed completed successfully.')
 }
 

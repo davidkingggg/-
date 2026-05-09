@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import {
   validateSupplierAndCategory,
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
     const priority = searchParams.get('priority');
     const needBossDecision = searchParams.get('needBossDecision');
 
-    const where: any = { isArchived: false };
+    const where: Prisma.SupplierDevelopmentProcessWhereInput = { isArchived: false };
 
     if (supplierId) where.supplierId = supplierId;
     if (categoryId) where.categoryId = categoryId;
