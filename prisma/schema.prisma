@@ -1,0 +1,344 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Category {
+  id                String   @id @default(uuid())
+  name              String
+  type              String?
+  isPriority        Boolean  @default(false)
+  standardLevel     String?  // 高 / 中 / 低
+  afterSalesRisk    String?  // 高 / 中 / 低
+  purchaseFrequency String?  // 高 / 中 / 低
+  notes             String?
+  isArchived        Boolean  @default(false)
+  archivedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  suppliers                  Supplier[]
+  quoteSheets                QuoteSheet[]
+  quoteItems                 QuoteItem[]
+  supplierScores             SupplierScore[]
+  investigationRecords       InvestigationRecord[]
+  supplierDevelopmentProcess SupplierDevelopmentProcess[]
+  purchaseExecutionProcess   PurchaseExecutionProcess[]
+  salesMaterials             SalesMaterial[]
+}
+
+model Supplier {
+  id                     String   @id @default(uuid())
+  name                   String
+  categoryId             String
+  category               Category @relation(fields: [categoryId], references: [id])
+  region                 String?
+  companyType            String?  // 厂家 / 代理商 / 经销商 / 服务商 / 安装公司 / 其他
+  source                 String?  // 展会 / 网络 / 老板推荐 / 销售推荐 / 供应商转介绍 / 其他
+  hasQuoted              Boolean  @default(false)
+  hasVisited             Boolean  @default(false)
+  willingToJoin          Boolean  @default(false)
+  cooperationWillingness String?  // 强 / 一般 / 弱 / 未确认
+  qualification          String?
+  deliveryAbility        String?
+  afterSalesAbility      String?
+  paymentTerms           String?
+  priceLevel             String?  // 高 / 中 / 低 / 未知
+  recommendedLevel       String?  // A优先推荐 / B备选 / C暂不推荐 / 未评级
+  riskSummary            String?
+  notes                  String?
+  nextFollowUpDate       DateTime?
+  isArchived             Boolean  @default(false)
+  archivedAt             DateTime?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  contacts                   SupplierContact[]
+  quoteSheets                QuoteSheet[]
+  quoteItems                 QuoteItem[]
+  scores                     SupplierScore[]
+  investigationRecords       InvestigationRecord[]
+  supplierDevelopmentProcess SupplierDevelopmentProcess[]
+  purchaseExecutionProcess   PurchaseExecutionProcess[]
+  riskTags                   SupplierRiskTag[]
+}
+
+model SupplierContact {
+  id         String   @id @default(uuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  name       String
+  position   String?
+  phone      String?
+  wechat     String?
+  email      String?
+  isPrimary  Boolean  @default(false)
+  notes      String?
+  isArchived Boolean  @default(false)
+  archivedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Person {
+  id         String   @id @default(uuid())
+  name       String
+  department String?
+  role       String?  // 总经理助理 / 老板 / 销售 / 商务 / 工程师 / 采购需求提交人 / 行政 / 其他
+  phone      String?
+  email      String?
+  notes      String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  supplierScores               SupplierScore[]
+  devOwnerProcess              SupplierDevelopmentProcess[] @relation("DevOwner")
+  purchaseRequesterProcess     PurchaseExecutionProcess[] @relation("PurchaseRequester")
+  purchaseOwnerProcess         PurchaseExecutionProcess[] @relation("PurchaseOwner")
+  purchaseSalesPersonProcess   PurchaseExecutionProcess[] @relation("PurchaseSalesPerson")
+}
+
+model QuoteSheet {
+  id         String   @id @default(uuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  quoteDate  DateTime
+  sourceType String?  // 微信 / 图片 / PDF / Excel / 口头 / 其他
+  quoteStage String?  // 初次报价 / 二次议价 / 最终确认价 / 量大优惠价
+  rawText    String?
+  notes      String?
+  isArchived Boolean  @default(false)
+  archivedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  items      QuoteItem[]
+}
+
+model QuoteItem {
+  id             String   @id @default(uuid())
+  quoteSheetId   String
+  quoteSheet     QuoteSheet @relation(fields: [quoteSheetId], references: [id])
+  supplierId     String
+  supplier       Supplier   @relation(fields: [supplierId], references: [id])
+  categoryId     String
+  category       Category   @relation(fields: [categoryId], references: [id])
+  compareKey     String     // 对比规格标识
+  productName    String
+  model          String?
+  unit           String?
+  price          Decimal?
+  includesTax    Boolean  @default(false)
+  taxRate        Decimal?
+  includesFreight Boolean @default(false)
+  minOrderQty    Int?
+  deliveryTime   String?
+  paymentTerms   String?
+  warranty       String?
+  priceNotes     String?
+  isArchived     Boolean  @default(false)
+  archivedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model SupplierScore {
+  id              String   @id @default(uuid())
+  supplierId      String
+  supplier        Supplier @relation(fields: [supplierId], references: [id])
+  categoryId      String
+  category        Category @relation(fields: [categoryId], references: [id])
+  scorerId        String
+  scorer          Person   @relation(fields: [scorerId], references: [id])
+  scoreDate       DateTime
+  qualityScore    Decimal? // 25分
+  priceScore      Decimal? // 20分
+  deliveryScore   Decimal? // 15分
+  afterSalesScore Decimal? // 15分
+  cooperationScore Decimal? // 10分
+  paymentScore    Decimal? // 10分
+  regionScore     Decimal? // 5分
+  totalScore      Decimal? // 100分
+  systemLevel     String?
+  manualLevel     String?
+  finalLevel      String?
+  scoreReason     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model InvestigationRecord {
+  id                 String   @id @default(uuid())
+  type               String   // 展会 / 线上沟通 / 实地考察 / 电话沟通 / 微信沟通
+  supplierId         String
+  supplier           Supplier @relation(fields: [supplierId], references: [id])
+  categoryId         String
+  category           Category @relation(fields: [categoryId], references: [id])
+  date               DateTime
+  location           String?
+  participants       String?
+  keyPoints          String?
+  productHighlights  String?
+  priceInfo          String?
+  qualificationInfo  String?
+  deliveryInfo       String?
+  afterSalesInfo     String?
+  risks              String?
+  nextActions        String?
+  recommendFollowUp  Boolean  @default(true)
+  notes              String?
+  isArchived         Boolean  @default(false)
+  archivedAt         DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model SupplierDevelopmentProcess {
+  id                  String   @id @default(uuid())
+  supplierId          String
+  supplier            Supplier @relation(fields: [supplierId], references: [id])
+  categoryId          String
+  category            Category @relation(fields: [categoryId], references: [id])
+  currentStage        String
+  ownerId             String
+  owner               Person   @relation("DevOwner", fields: [ownerId], references: [id])
+  priority            String?  // 高 / 中 / 低
+  dueDate             DateTime?
+  currentIssue        String?
+  nextAction          String?
+  needBossDecision    Boolean  @default(false)
+  needSalesSupport    Boolean  @default(false)
+  needBusinessSupport Boolean  @default(false)
+  status              String   // 进行中 / 已完成 / 暂停 / 淘汰
+  notes               String?
+  isArchived          Boolean  @default(false)
+  archivedAt          DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model PurchaseExecutionProcess {
+  id                    String   @id @default(uuid())
+  title                 String
+  supplierId            String
+  supplier              Supplier @relation(fields: [supplierId], references: [id])
+  categoryId            String
+  category              Category @relation(fields: [categoryId], references: [id])
+  requesterId           String
+  requester             Person   @relation("PurchaseRequester", fields: [requesterId], references: [id])
+  ownerId               String
+  owner                 Person   @relation("PurchaseOwner", fields: [ownerId], references: [id])
+  salesPersonId         String?
+  salesPerson           Person?  @relation("PurchaseSalesPerson", fields: [salesPersonId], references: [id])
+  currentStage          String
+  priority              String?  // 高 / 中 / 低
+  dueDate               DateTime?
+  currentIssue          String?
+  nextAction            String?
+  needBossDecision      Boolean  @default(false)
+  needPaymentRequest    Boolean  @default(false)
+  purchaseAmount        Decimal?
+  contractNo            String?
+  contractDate          DateTime?
+  paymentRequestDate    DateTime?
+  arrivalDate           DateTime?
+  acceptanceDate        DateTime?
+  invoiceDate           DateTime?
+  invoiceNo             String?
+  prepaymentAmount      Decimal?
+  offsetAmount          Decimal?
+  hasArrived            Boolean  @default(false)
+  hasAccepted           Boolean  @default(false)
+  hasInvoice            Boolean  @default(false)
+  hasPrepaymentOffset   Boolean  @default(false)
+  status                String   // 进行中 / 已完成 / 暂停 / 异常
+  notes                 String?
+  isArchived            Boolean  @default(false)
+  archivedAt            DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model AdminTask {
+  id         String   @id @default(uuid())
+  title      String
+  type       String   // 会议/周报/办公采购/接待等
+  priority   String?  // 高 / 中 / 低
+  dueDate    DateTime?
+  isRecurring Boolean @default(false)
+  status     String   // 未开始 / 进行中 / 已完成 / 暂停
+  completedAt DateTime?
+  notes      String?
+  isArchived Boolean  @default(false)
+  archivedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model SalesMaterial {
+  id                  String   @id @default(uuid())
+  title               String
+  categoryId          String
+  category            Category @relation(fields: [categoryId], references: [id])
+  targetAudience      String?  // 销售部门 / 商务总助 / 安装公司 / 老板 / 客户
+  coreSellingPoints   String?
+  priceAdvantage      String?
+  supplierAdvantage   String?
+  qualificationSupport String?
+  deliveryAdvantage   String?
+  afterSalesAdvantage String?
+  riskNotice          String?
+  formalText          String?
+  isArchived          Boolean  @default(false)
+  archivedAt          DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  notes     String?
+  updatedAt DateTime @updatedAt
+}
+
+model Attachment {
+  id          String   @id @default(uuid())
+  relatedType String   // 例如：Supplier, QuoteSheet 等
+  relatedId   String
+  fileName    String
+  filePath    String
+  fileType    String?
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model RiskTag {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  color     String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  suppliers SupplierRiskTag[]
+}
+
+model SupplierRiskTag {
+  supplierId String
+  riskTagId  String
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  riskTag    RiskTag  @relation(fields: [riskTagId], references: [id])
+
+  @@id([supplierId, riskTagId])
+}
