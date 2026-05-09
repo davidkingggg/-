@@ -280,6 +280,73 @@ async function main() {
     }
   }
 
+  // 13. SupplierDevelopmentProcess
+  const devProcessesData = [
+    { supplierName: '北京某仪表科技', currentStage: '初步沟通', ownerName: '王销售', priority: '高', dueDate: '2026-05-20', currentProblem: '对方要求提供详细的参数表', status: '进行中' },
+    { supplierName: '苏州某电气设备', currentStage: '内部评审', ownerName: '李总助', priority: '中', needBossDecision: true, status: '进行中' },
+  ]
+  for (const dp of devProcessesData) {
+    const supplierId = supplierIds[dp.supplierName]
+    if (!supplierId) continue
+    const sup = await prisma.supplier.findUnique({ where: { id: supplierId } })
+    if (!sup) continue
+    const owner = await prisma.person.findFirst({ where: { name: dp.ownerName } })
+
+    const existing = await prisma.supplierDevelopmentProcess.findFirst({
+      where: { supplierId, categoryId: sup.categoryId, currentStage: dp.currentStage }
+    })
+
+    if (!existing) {
+      await prisma.supplierDevelopmentProcess.create({
+        data: {
+          supplierId,
+          categoryId: sup.categoryId,
+          currentStage: dp.currentStage,
+          ownerId: owner?.id || '',
+          priority: dp.priority,
+          dueDate: dp.dueDate ? new Date(dp.dueDate + 'T00:00:00Z') : null,
+          currentProblem: dp.currentProblem,
+          needBossDecision: dp.needBossDecision || false,
+          status: dp.status,
+        }
+      })
+    }
+  }
+
+  // 14. PurchaseExecutionProcess
+  const purProcessesData = [
+    { title: '无锡管件批量采购', supplierName: '无锡某管件厂', currentStage: '合同签订', requesterName: '陈采购', ownerName: '刘商务', priority: '高', purchaseAmount: 45000, status: '进行中' },
+    { title: '杭州阀门样品采购', supplierName: '杭州某阀门厂', currentStage: '供应商备货/发货', requesterName: '赵工程师', ownerName: '王销售', purchaseAmount: 2000, status: '进行中' },
+  ]
+  for (const pp of purProcessesData) {
+    const supplierId = supplierIds[pp.supplierName]
+    if (!supplierId) continue
+    const sup = await prisma.supplier.findUnique({ where: { id: supplierId } })
+    if (!sup) continue
+    const requester = await prisma.person.findFirst({ where: { name: pp.requesterName } })
+    const owner = await prisma.person.findFirst({ where: { name: pp.ownerName } })
+
+    const existing = await prisma.purchaseExecutionProcess.findFirst({
+      where: { supplierId, categoryId: sup.categoryId, title: pp.title, currentStage: pp.currentStage }
+    })
+
+    if (!existing) {
+      await prisma.purchaseExecutionProcess.create({
+        data: {
+          title: pp.title,
+          supplierId,
+          categoryId: sup.categoryId,
+          currentStage: pp.currentStage,
+          requesterId: requester?.id || '',
+          ownerId: owner?.id || '',
+          priority: pp.priority || '中',
+          purchaseAmount: pp.purchaseAmount,
+          status: pp.status,
+        }
+      })
+    }
+  }
+
   console.log('Seed completed successfully.')
 }
 

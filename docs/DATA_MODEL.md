@@ -170,13 +170,13 @@
 - `ownerId`: 负责人
 - `priority`: 高 / 中 / 低
 - `dueDate`: 截止时间
-- `currentIssue`: 当前问题
+- `currentProblem`: 当前问题
 - `nextAction`: 下一步动作
 - `needBossDecision`: 是否需要老板决策
 - `needSalesSupport`: 是否需要销售部门配合
-- `needBusinessSupport`: 是否需要商务总助配合
+- `needBusinessAssistantSupport`: 是否需要商务总助配合
 - `status`: 进行中 / 已完成 / 暂停 / 淘汰
-- `notes`: 备注
+- `remark`: 备注
 - `isArchived`: 是否已归档
 - `archivedAt`: 归档时间
 - `createdAt`: 创建时间
@@ -194,7 +194,7 @@
 - `currentStage`: 当前阶段
 - `priority`: 高 / 中 / 低
 - `dueDate`: 截止时间
-- `currentIssue`: 当前问题
+- `currentProblem`: 当前问题
 - `nextAction`: 下一步动作
 - `needBossDecision`: 是否需要老板决策
 - `needPaymentRequest`: 是否需要付款申请
@@ -213,7 +213,7 @@
 - `hasInvoice`: 是否已开票
 - `hasPrepaymentOffset`: 是否涉及预付款抵充
 - `status`: 进行中 / 已完成 / 暂停 / 异常
-- `notes`: 备注
+- `remark`: 备注
 - `isArchived`: 是否已归档
 - `archivedAt`: 归档时间
 - `createdAt`: 创建时间

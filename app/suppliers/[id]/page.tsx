@@ -32,7 +32,7 @@ const COOPERATION = ['强', '一般', '弱', '未确认']
 const PRICE_LEVELS = ['高', '中', '低', '未知']
 const REC_LEVELS = ['A优先推荐', 'B备选', 'C暂不推荐', '未评级']
 
-const TABS = ['基本信息', '联系人', '风险与备注', '关联报价', '评分与考察', '采购记录']
+const TABS = ['基本信息', '联系人', '风险与备注', '关联报价', '评分与考察', '开发进度', '采购执行']
 
 export default function SupplierDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -329,7 +329,8 @@ export default function SupplierDetailPage() {
       {/* Tab 3: 关联报价 */}
       {activeTab === 3 && <SupplierQuotesTab supplierId={id} />}
       {activeTab === 4 && <SupplierScoresAndInvestigationsTab supplier={supplier} />}
-      {activeTab === 5 && <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">采购记录模块开发中，将在第 6 阶段实现</div>}
+      {activeTab === 5 && <SupplierDevelopmentTab supplier={supplier} />}
+      {activeTab === 6 && <SupplierPurchaseTab supplier={supplier} />}
     </div>
   )
 }
@@ -499,6 +500,126 @@ function SupplierScoresAndInvestigationsTab({ supplier }: { supplier: Supplier }
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function SupplierDevelopmentTab({ supplier }: { supplier: Supplier }) {
+  const router = useRouter()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [processes, setProcesses] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(`/api/development-processes?supplierId=${supplier.id}`)
+      .then(r => r.json())
+      .then(setProcesses)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [supplier.id])
+
+  if (loading) return <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">加载中...</div>
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold text-gray-800">关联开发流程</h2>
+        <button
+          onClick={() => router.push(`/development-board?supplierId=${supplier.id}&categoryId=${supplier.categoryId}&autoOpen=true`)}
+          className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+        >
+          + 新建开发流程
+        </button>
+      </div>
+      {processes.length === 0 ? (
+        <div className="text-gray-400 text-center py-8 border-2 border-dashed border-gray-100 rounded-lg">暂无关联的开发流程</div>
+      ) : (
+        <table className="w-full text-sm">
+          <thead><tr className="bg-gray-50 border-b">
+            <th className="text-left px-4 py-3 font-semibold text-gray-600">品类</th>
+            <th className="text-left px-4 py-3 font-semibold text-gray-600">当前阶段</th>
+            <th className="text-left px-4 py-3 font-semibold text-gray-600">状态</th>
+            <th className="text-left px-4 py-3 font-semibold text-gray-600">负责人</th>
+            <th className="text-left px-4 py-3 font-semibold text-gray-600">优先级</th>
+          </tr></thead>
+          <tbody>
+            {processes.map(p => (
+              <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                <td className="px-4 py-3">{p.category?.name}</td>
+                <td className="px-4 py-3">{p.currentStage}</td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-1 rounded text-xs ${p.status === '已完成' ? 'bg-green-50 text-green-700' : p.status === '进行中' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+                    {p.status}
+                  </span>
+                </td>
+                <td className="px-4 py-3">{p.owner?.name || '-'}</td>
+                <td className="px-4 py-3">{p.priority || '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
+}
+
+function SupplierPurchaseTab({ supplier }: { supplier: Supplier }) {
+  const router = useRouter()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [processes, setProcesses] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(`/api/purchase-processes?supplierId=${supplier.id}`)
+      .then(r => r.json())
+      .then(setProcesses)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [supplier.id])
+
+  if (loading) return <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">加载中...</div>
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold text-gray-800">关联采购执行记录</h2>
+        <button
+          onClick={() => router.push(`/purchase-board?supplierId=${supplier.id}&categoryId=${supplier.categoryId}&autoOpen=true`)}
+          className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+        >
+          + 新建采购事项
+        </button>
+      </div>
+      {processes.length === 0 ? (
+        <div className="text-gray-400 text-center py-8 border-2 border-dashed border-gray-100 rounded-lg">暂无关联的采购执行记录</div>
+      ) : (
+        <table className="w-full text-sm">
+          <thead><tr className="bg-gray-50 border-b">
+            <th className="text-left px-4 py-3 font-semibold text-gray-600">事项名称</th>
+            <th className="text-left px-4 py-3 font-semibold text-gray-600">品类</th>
+            <th className="text-left px-4 py-3 font-semibold text-gray-600">当前阶段</th>
+            <th className="text-left px-4 py-3 font-semibold text-gray-600">状态</th>
+            <th className="text-left px-4 py-3 font-semibold text-gray-600">采购金额</th>
+            <th className="text-left px-4 py-3 font-semibold text-gray-600">负责人</th>
+          </tr></thead>
+          <tbody>
+            {processes.map(p => (
+              <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                <td className="px-4 py-3 font-medium">{p.title}</td>
+                <td className="px-4 py-3">{p.category?.name}</td>
+                <td className="px-4 py-3">{p.currentStage}</td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-1 rounded text-xs ${p.status === '已完成' ? 'bg-green-50 text-green-700' : p.status === '进行中' ? 'bg-blue-50 text-blue-700' : p.status === '异常' ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
+                    {p.status}
+                  </span>
+                </td>
+                <td className="px-4 py-3">{p.purchaseAmount !== null ? `¥${Number(p.purchaseAmount).toLocaleString()}` : '-'}</td>
+                <td className="px-4 py-3">{p.owner?.name || '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   )
 }

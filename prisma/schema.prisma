@@ -207,15 +207,15 @@ model SupplierDevelopmentProcess {
   currentStage        String
   ownerId             String
   priority            String?
-  dueDate             DateTime?
-  currentIssue        String?
-  nextAction          String?
-  needBossDecision    Boolean   @default(false)
-  needSalesSupport    Boolean   @default(false)
-  needBusinessSupport Boolean   @default(false)
-  status              String
-  notes               String?
-  isArchived          Boolean   @default(false)
+  dueDate                      DateTime?
+  currentProblem               String?
+  nextAction                   String?
+  needBossDecision             Boolean   @default(false)
+  needSalesSupport             Boolean   @default(false)
+  needBusinessAssistantSupport Boolean   @default(false)
+  status                       String
+  remark                       String?
+  isArchived                   Boolean   @default(false)
   archivedAt          DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
@@ -235,7 +235,7 @@ model PurchaseExecutionProcess {
   currentStage        String
   priority            String?
   dueDate             DateTime?
-  currentIssue        String?
+  currentProblem      String?
   nextAction          String?
   needBossDecision    Boolean   @default(false)
   needPaymentRequest  Boolean   @default(false)
@@ -254,7 +254,7 @@ model PurchaseExecutionProcess {
   hasInvoice          Boolean   @default(false)
   hasPrepaymentOffset Boolean   @default(false)
   status              String
-  notes               String?
+  remark              String?
   isArchived          Boolean   @default(false)
   archivedAt          DateTime?
   createdAt           DateTime  @default(now())
