@@ -57,7 +57,7 @@ export default function Sidebar() {
         </ul>
       </nav>
       <div className="p-4 text-xs text-slate-500 text-center border-t border-slate-800">
-        v0.2.0 (本地优先)
+        v0.9.2 (本地优先)
       </div>
     </aside>
   );
