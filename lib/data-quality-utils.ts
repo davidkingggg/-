@@ -1,5 +1,6 @@
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
+import type { CSVValue } from '@/lib/csv-utils'
 
 export type DataQualitySeverity = 'high' | 'medium' | 'low'
 
@@ -200,6 +201,56 @@ export async function buildDataQualityReport(filters: DataQualityFilters): Promi
     },
     checks: visibleChecks,
   }
+}
+
+function severityText(severity: DataQualitySeverity) {
+  if (severity === 'high') return '高风险'
+  if (severity === 'medium') return '中风险'
+  return '低风险'
+}
+
+export function buildDataQualityCsvRows(data: DataQualityResponse): CSVValue[][] {
+  const rows: CSVValue[][] = [[
+    '检查项',
+    '当前检查项问题总数',
+    '当前检查项导出条数',
+    '当前检查项是否还有更多',
+    '严重程度',
+    '问题标题',
+    '关联对象类型',
+    '关联对象 ID',
+    '供应商',
+    '品类',
+    '状态',
+    '问题原因',
+    '建议处理',
+    '来源链接',
+    '更新时间',
+  ]]
+
+  for (const check of data.checks) {
+    for (const issue of check.items) {
+      rows.push([
+        check.title,
+        check.count,
+        check.returnedCount,
+        check.hasMore ? '是' : '否',
+        severityText(issue.severity),
+        issue.title,
+        issue.entityType,
+        issue.entityId,
+        issue.supplierName || '',
+        issue.categoryName || '',
+        issue.status || '',
+        issue.reason,
+        issue.suggestion,
+        issue.href || '',
+        issue.updatedAt || '',
+      ])
+    }
+  }
+
+  return rows
 }
 
 function finishCheck(definition: CheckDefinition, issues: DataQualityIssue[], limit: number): DataQualityCheckResult {

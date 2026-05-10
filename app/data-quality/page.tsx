@@ -75,6 +75,7 @@ export default function DataQualityPage() {
   const [categoryId, setCategoryId] = useState('')
   const [limit, setLimit] = useState('50')
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
   const [error, setError] = useState('')
 
   const queryString = useMemo(() => {
@@ -85,6 +86,8 @@ export default function DataQualityPage() {
     if (limit) params.set('limit', limit)
     return params.toString()
   }, [check, severity, categoryId, limit])
+
+  const hasMoreResults = useMemo(() => data.checks.some((checkResult) => checkResult.hasMore), [data.checks])
 
   useEffect(() => {
     let ignore = false
@@ -143,6 +146,32 @@ export default function DataQualityPage() {
     setLimit('50')
   }
 
+  async function handleExportCurrentResults() {
+    setExporting(true)
+    setError('')
+
+    try {
+      const exportUrl = queryString ? `/api/data-quality/export?${queryString}` : '/api/data-quality/export'
+      const response = await fetch(exportUrl, { cache: 'no-store' })
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null)
+        throw new Error(payload?.error || '导出数据质量检查结果失败')
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'data-quality-export.csv'
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '导出数据质量检查结果失败')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -150,7 +179,17 @@ export default function DataQualityPage() {
           <h1 className="text-2xl font-bold text-gray-900">数据质量检查</h1>
           <p className="mt-1 text-sm text-gray-600">集中查看供应商、报价、流程和资料中的数据问题。本页只读展示，不会自动修改数据。</p>
         </div>
-        <div className="text-sm text-gray-500">生成时间：{formatDateTime(data.summary.generatedAt)}</div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="text-sm text-gray-500">生成时间：{formatDateTime(data.summary.generatedAt)}</div>
+          <button
+            type="button"
+            onClick={handleExportCurrentResults}
+            disabled={loading || exporting}
+            className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {exporting ? '导出中...' : '导出当前显示结果'}
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -209,6 +248,12 @@ export default function DataQualityPage() {
           重置筛选
         </button>
       </div>
+
+      {hasMoreResults && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          当前仅导出已显示的问题，仍有更多问题未包含。可调高每类显示数量后重新导出。
+        </div>
+      )}
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
 
@@ -312,7 +357,7 @@ function IssueRow({ issue }: { issue: DataQualityIssue }) {
             href={issue.href}
             className="shrink-0 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-center text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100"
           >
-            查看来源
+            查看并处理
           </Link>
         )}
       </div>

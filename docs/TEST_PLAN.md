@@ -87,6 +87,20 @@
 - [ ] 销售/商务资料 CSV 导出是否正常
 - [ ] 销售/商务资料 Markdown 导出是否正常
 
+## 9B. 数据质量检查导出测试
+- [ ] `/data-quality` 页面能否正常打开
+- [ ] `/api/data-quality` 能否正常返回 JSON
+- [ ] `/api/data-quality/export` 能否正常返回 CSV
+- [ ] 数据质量 CSV 是否包含 UTF-8 BOM，且中文在 Excel 中正常显示
+- [ ] 数据质量 CSV 响应头是否包含 `Content-Type: text/csv; charset=utf-8`、`Content-Disposition: attachment; filename="data-quality-export.csv"` 和 `Cache-Control: no-store`
+- [ ] `severity` 筛选后页面和 CSV 导出口径是否一致
+- [ ] `check` 筛选后页面和 CSV 导出口径是否一致
+- [ ] `categoryId` 筛选后页面和 CSV 导出口径是否一致
+- [ ] `limit` 限制下的 `count`、`returnedCount`、`hasMore` 是否和 CSV 中“当前检查项”字段一致
+- [ ] 当 `hasMore=true` 时，页面是否提示“当前仅导出已显示的问题，仍有更多问题未包含”
+- [ ] 来源链接是否为系统内相对路径，且未写死 `localhost`
+- [ ] 导出过程是否不写入数据库、不新增 migration
+
 ## 10. 附件模块测试
 - [ ] 能否给供应商添加附件路径
 - [ ] 能否给报价单添加附件路径
