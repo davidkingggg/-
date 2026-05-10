@@ -80,8 +80,8 @@ const quoteItemsTemplate: CSVTemplate = {
 const suppliersTemplate: CSVTemplate = {
   type: 'suppliers',
   title: '供应商导入模板',
-  fileName: 'suppliers_template_preview.csv',
-  description: '供应商批量导入预研模板；第 8C 第一版仅提供字段说明，不开放导入。',
+  fileName: 'suppliers_template.csv',
+  description: '用于批量导入供应商及其联系人。',
   headers: [
     '供应商名称',
     '主品类',
@@ -134,11 +134,12 @@ const suppliersTemplate: CSVTemplate = {
   ],
   requiredFields: ['供应商名称', '主品类'],
   notes: [
-    '第 8C 第一版不开放供应商 CSV 导入，仅提供模板预研和字段说明。',
-    '主品类必须是系统中已有品类。',
-    '风险点如有多个，建议使用中文分号分隔。',
+    '主品类必须是系统中已有且未归档的品类。',
+    '供应商名称不能与已有未归档供应商重复，CSV 内部也不能重复。',
+    '每行最多创建 1 个供应商和 0/1 个联系人。',
+    '联系人姓名非空时才创建联系人记录。',
   ],
-  supportedImport: false,
+  supportedImport: true,
 }
 
 const templates: Record<CSVTemplateType, CSVTemplate> = {
