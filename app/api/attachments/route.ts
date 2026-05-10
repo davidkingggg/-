@@ -16,31 +16,51 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl
     const relatedType = searchParams.get('relatedType')
     const includeArchived = searchParams.get('includeArchived') === 'true'
+    const keyword = searchParams.get('keyword')?.trim() || null
+    const fileType = searchParams.get('fileType')?.trim() || null
 
     const where: Record<string, unknown> = {}
     if (!includeArchived) where.isArchived = false
     if (relatedType) where.relatedType = relatedType
+    if (fileType) where.fileType = fileType
+
+    if (keyword) {
+      where.OR = [
+        { fileName: { contains: keyword } },
+        { filePath: { contains: keyword } },
+        { notes: { contains: keyword } },
+      ]
+    }
+
+    const baseWhere = includeArchived ? {} : { isArchived: false }
 
     const records = await prisma.attachment.findMany({
       where,
       orderBy: { createdAt: 'desc' },
     })
 
-    // 获取所有 relatedType 值用于筛选
-    const typeSet = await prisma.attachment.findMany({
-      select: { relatedType: true },
-      distinct: ['relatedType'],
-      where: includeArchived ? {} : { isArchived: false },
-    })
+    // 获取筛选项
+    const [typeSet, fileTypeSet] = await Promise.all([
+      prisma.attachment.findMany({
+        select: { relatedType: true },
+        distinct: ['relatedType'],
+        where: baseWhere,
+      }),
+      prisma.attachment.findMany({
+        select: { fileType: true },
+        distinct: ['fileType'],
+        where: baseWhere,
+      }),
+    ])
 
     return NextResponse.json({
       records,
       relatedTypes: typeSet.map((t) => t.relatedType).filter(Boolean),
+      fileTypes: fileTypeSet.map((t) => t.fileType).filter(Boolean),
     })
   } catch {
     return NextResponse.json({ error: '获取附件记录失败' }, { status: 500 })
   }
 }
 
-// 导出辅助函数供页面使用
 export { RELATED_TYPE_LABELS, RELATED_TYPE_LINKS }

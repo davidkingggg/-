@@ -40,34 +40,16 @@ export default function AttachmentsPage() {
   const { showToast } = useToast()
   const [records, setRecords] = useState<AttachmentRecord[]>([])
   const [relatedTypes, setRelatedTypes] = useState<string[]>([])
+  const [fileTypes, setFileTypes] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [filterType, setFilterType] = useState('')
+  const [filterFileType, setFilterFileType] = useState('')
+  const [keyword, setKeyword] = useState('')
   const [includeArchived, setIncludeArchived] = useState(false)
   const [archiveTarget, setArchiveTarget] = useState<AttachmentRecord | null>(null)
   const [editTarget, setEditTarget] = useState<AttachmentRecord | null>(null)
   const [editForm, setEditForm] = useState({ fileName: '', filePath: '', fileType: '', notes: '' })
-
-  const fetchRecords = async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams()
-      if (filterType) params.set('relatedType', filterType)
-      if (includeArchived) params.set('includeArchived', 'true')
-      const res = await fetch(`/api/attachments?${params}`)
-      if (!res.ok) {
-        const data = await res.json()
-        showToast(data.error || '获取附件记录失败', 'error')
-        return
-      }
-      const data = await res.json()
-      setRecords(data.records)
-      setRelatedTypes(data.relatedTypes || [])
-    } catch {
-      showToast('获取附件记录失败', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     let ignore = false
@@ -76,6 +58,8 @@ export default function AttachmentsPage() {
       try {
         const params = new URLSearchParams()
         if (filterType) params.set('relatedType', filterType)
+        if (filterFileType) params.set('fileType', filterFileType)
+        if (keyword.trim()) params.set('keyword', keyword.trim())
         if (includeArchived) params.set('includeArchived', 'true')
         const res = await fetch(`/api/attachments?${params}`)
         if (!res.ok) return
@@ -83,6 +67,7 @@ export default function AttachmentsPage() {
         if (!ignore) {
           setRecords(data.records)
           setRelatedTypes(data.relatedTypes || [])
+          setFileTypes(data.fileTypes || [])
         }
       } catch {
         // ignore
@@ -92,7 +77,7 @@ export default function AttachmentsPage() {
     }
     load()
     return () => { ignore = true }
-  }, [filterType, includeArchived])
+  }, [filterType, filterFileType, keyword, includeArchived, reloadKey])
 
   const handleArchive = async () => {
     if (!archiveTarget) return
@@ -109,7 +94,8 @@ export default function AttachmentsPage() {
       }
       showToast('附件记录已归档', 'success')
       setArchiveTarget(null)
-      fetchRecords()
+      // trigger reload
+      setReloadKey((k) => k + 1)
     } catch {
       showToast('归档失败', 'error')
     }
@@ -140,7 +126,7 @@ export default function AttachmentsPage() {
       }
       showToast('附件记录已更新', 'success')
       setEditTarget(null)
-      fetchRecords()
+      setReloadKey((k) => k + 1)
     } catch {
       showToast('更新失败', 'error')
     }
@@ -165,6 +151,16 @@ export default function AttachmentsPage() {
 
       <div className="flex items-center gap-4 mb-6 flex-wrap">
         <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-600">关键词：</label>
+          <input
+            type="text"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="搜索文件名、路径、备注"
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div className="flex items-center gap-2">
           <label className="text-sm text-gray-600">关联类型：</label>
           <select
             value={filterType}
@@ -174,6 +170,19 @@ export default function AttachmentsPage() {
             <option value="">全部</option>
             {relatedTypes.map((t) => (
               <option key={t} value={t}>{RELATED_TYPE_LABELS[t] || t}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-600">文件类型：</label>
+          <select
+            value={filterFileType}
+            onChange={(e) => setFilterFileType(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">全部</option>
+            {fileTypes.map((t) => (
+              <option key={t} value={t}>{t}</option>
             ))}
           </select>
         </div>
@@ -241,7 +250,6 @@ export default function AttachmentsPage() {
         </div>
       )}
 
-      {/* 编辑弹窗 */}
       {editTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setEditTarget(null)} />
