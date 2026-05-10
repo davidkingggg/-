@@ -253,7 +253,7 @@ export async function restoreBackup(
   await copyFile(backupPath, databasePath)
 
   return {
-    message: '恢复已完成，请重启本地服务并刷新系统，以确保 Prisma 连接重新加载。',
+    message: '恢复已完成。请停止并重新启动本地服务后再继续使用，并刷新系统以确保 Prisma 连接重新加载。',
     restoredFrom: safeFileName,
     beforeRestoreBackup: beforeRestore.backup,
     warnings: database.warnings,

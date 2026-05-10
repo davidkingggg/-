@@ -51,6 +51,12 @@ function typeLabel(type: BackupType) {
   return type === 'before-restore' ? '恢复前安全备份' : '普通备份'
 }
 
+function typeDescription(type: BackupType) {
+  return type === 'before-restore'
+    ? '恢复操作前自动生成，用于必要时回退。'
+    : '手动创建的当前 SQLite 数据库快照。'
+}
+
 export default function BackupPage() {
   const [data, setData] = useState<BackupsResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -123,7 +129,10 @@ export default function BackupPage() {
       })
       const payload = await res.json()
       if (!res.ok) throw new Error(payload.error || '恢复备份失败。')
-      showToast(payload.message, 'success')
+      showToast(
+        payload.message || '恢复已完成。请停止并重新启动本地服务后再继续使用。',
+        'success'
+      )
       if (payload.warnings?.length) showToast(payload.warnings.join(' '), 'error')
       setRestoreTarget(null)
       setConfirmText('')
@@ -162,6 +171,30 @@ export default function BackupPage() {
         </button>
       </div>
 
+      <section className="bg-sky-50 border border-sky-100 rounded-xl p-5">
+        <h2 className="text-base font-semibold text-sky-950">运维范围说明</h2>
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-sky-900">
+          <div>
+            <div className="font-medium">只处理本地数据库</div>
+            <p className="mt-1 text-sky-800">
+              本功能仅备份和恢复 `prisma/schema.prisma` 指向的本地 SQLite 数据库文件。
+            </p>
+          </div>
+          <div>
+            <div className="font-medium">不包含外部资产</div>
+            <p className="mt-1 text-sky-800">
+              不包含附件物理文件、系统环境、Node 依赖、本地日志、导出 CSV 或外部文档。
+            </p>
+          </div>
+          <div>
+            <div className="font-medium">恢复后需要重启</div>
+            <p className="mt-1 text-sky-800">
+              恢复会覆盖当前数据库。完成后请停止并重新启动本地服务，再继续使用系统。
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <div className="flex items-center justify-between gap-4 mb-4">
           <h2 className="text-lg font-semibold text-gray-800">当前数据库状态</h2>
@@ -197,6 +230,9 @@ export default function BackupPage() {
         {warningText && (
           <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             {warningText}
+            <div className="mt-1">
+              如正在运行开发服务，建议先停止服务，再执行备份或恢复，避免 SQLite 快照处于未完全落盘状态。
+            </div>
           </div>
         )}
       </section>
@@ -204,6 +240,9 @@ export default function BackupPage() {
       <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-800">备份列表</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            仅显示符合系统命名规则的 `.sqlite` 文件。普通备份用于手动留存当前数据库，恢复前安全备份用于恢复操作前的回退保护。
+          </p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -211,6 +250,7 @@ export default function BackupPage() {
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="text-left px-5 py-3 font-semibold text-gray-600">文件名</th>
                 <th className="text-left px-5 py-3 font-semibold text-gray-600">类型</th>
+                <th className="text-left px-5 py-3 font-semibold text-gray-600">用途说明</th>
                 <th className="text-left px-5 py-3 font-semibold text-gray-600">大小</th>
                 <th className="text-left px-5 py-3 font-semibold text-gray-600">创建时间</th>
                 <th className="text-left px-5 py-3 font-semibold text-gray-600">修改时间</th>
@@ -222,6 +262,7 @@ export default function BackupPage() {
                 <tr key={backup.fileName} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
                   <td className="px-5 py-4 font-mono text-xs text-gray-700">{backup.fileName}</td>
                   <td className="px-5 py-4 text-gray-700">{typeLabel(backup.type)}</td>
+                  <td className="px-5 py-4 text-gray-600">{typeDescription(backup.type)}</td>
                   <td className="px-5 py-4 text-gray-700">{formatBytes(backup.size)}</td>
                   <td className="px-5 py-4 text-gray-700">{formatDate(backup.createdAt)}</td>
                   <td className="px-5 py-4 text-gray-700">{formatDate(backup.updatedAt)}</td>
@@ -253,7 +294,10 @@ export default function BackupPage() {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">确认恢复数据库</h3>
             <div className="space-y-3 text-sm text-gray-600">
               <p>恢复会覆盖当前 SQLite 主数据库文件。</p>
-              <p>系统会在恢复前自动创建 before-restore 安全备份，恢复完成后请重启本地服务并刷新系统。</p>
+              <p>系统会在恢复前自动创建 before-restore 安全备份，用于必要时回退到恢复前状态。</p>
+              <p className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-red-700">
+                恢复完成后，请停止并重新启动本地服务后再继续使用，并刷新系统页面。
+              </p>
               <p className="font-mono text-xs text-gray-700 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 break-all">
                 {restoreTarget.fileName}
               </p>
