@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/Toast'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
+import { buildCSVContent, buildErrorReportRows } from '@/lib/csv-utils'
 
 interface QuoteSheet {
   id: string
@@ -23,7 +24,14 @@ interface QuoteSheet {
 
 interface CategoryOption { id: string; name: string }
 interface SupplierOption { id: string; name: string }
-interface ImportError { row: number; field: string; message: string }
+interface ImportError {
+  row: number
+  field: string
+  value?: string
+  reason?: string
+  suggestion?: string
+  message?: string
+}
 
 const QUOTE_STAGES = ['初次报价', '二次议价', '最终确认价', '量大优惠价']
 
@@ -118,6 +126,39 @@ export default function QuotesPage() {
     } catch {
       showToast('导出失败', 'error')
     }
+  }
+
+  function downloadBlob(content: BlobPart, fileName: string, type: string) {
+    const blob = new Blob([content], { type })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function handleDownloadTemplate() {
+    try {
+      const res = await fetch('/api/csv-templates?type=quote-items')
+      if (!res.ok) throw new Error()
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'quote_items_template.csv'
+      a.click()
+      URL.revokeObjectURL(url)
+      showToast('模板下载成功', 'success')
+    } catch {
+      showToast('模板下载失败', 'error')
+    }
+  }
+
+  function handleDownloadErrorReport() {
+    if (!importErrors.length) return
+    const content = buildCSVContent(buildErrorReportRows(importErrors))
+    downloadBlob(content, `quote_import_errors_${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8')
   }
 
   async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -319,12 +360,25 @@ export default function QuotesPage() {
       {/* CSV 导入弹窗 */}
       <Modal open={importModalOpen} onClose={() => { setImportModalOpen(false); setImportErrors([]); setImportResult(null) }} title="CSV 导入报价明细">
         <div className="space-y-4">
-          <div className="text-sm text-gray-600">
-            <p className="mb-2">请选择符合模板格式的 CSV 文件进行导入。</p>
-            <p className="text-xs text-gray-400">
-              必需列：供应商名称、品类、报价日期、产品名称<br />
-              导入采用严格事务模式，任何一行有错误则全部取消
-            </p>
+          <div className="text-sm text-gray-600 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="mb-1">请选择符合模板格式的 CSV 文件进行导入。</p>
+                <p className="text-xs text-gray-500">
+                  必需列：供应商名称、品类、报价日期、对比规格标识、产品名称、报价。
+                </p>
+              </div>
+              <button
+                onClick={handleDownloadTemplate}
+                type="button"
+                className="shrink-0 px-3 py-1.5 text-xs text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                下载模板
+              </button>
+            </div>
+            <div className="rounded-lg bg-amber-50 border border-amber-100 px-3 py-2 text-xs text-amber-800">
+              导入采用严格事务模式：任何一行有错误，本次导入全部取消，不会写入部分数据。
+            </div>
           </div>
 
           <input
@@ -346,17 +400,44 @@ export default function QuotesPage() {
 
           {importErrors.length > 0 && (
             <div className="bg-red-50 rounded-lg p-4">
-              <p className="text-sm font-medium text-red-700 mb-2">
-                {importResult || '导入校验失败'}（共 {importErrors.length} 个错误）
-              </p>
-              <div className="max-h-60 overflow-y-auto space-y-1">
-                {importErrors.map((err, i) => (
-                  <div key={i} className="text-xs text-red-600 flex gap-2">
-                    <span className="shrink-0 font-mono">第{err.row}行</span>
-                    <span className="shrink-0 font-medium">[{err.field}]</span>
-                    <span>{err.message}</span>
-                  </div>
-                ))}
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <p className="text-sm font-medium text-red-700">
+                    {importResult || '导入校验失败'}（共 {importErrors.length} 个错误）
+                  </p>
+                  <p className="text-xs text-red-600 mt-1">本次导入未写入任何数据，请修正 CSV 后重新导入。</p>
+                </div>
+                <button
+                  onClick={handleDownloadErrorReport}
+                  type="button"
+                  className="shrink-0 px-3 py-1.5 text-xs text-red-700 bg-white border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                >
+                  下载错误报告
+                </button>
+              </div>
+              <div className="max-h-72 overflow-auto border border-red-100 rounded-lg bg-white">
+                <table className="w-full text-xs">
+                  <thead className="bg-red-50 sticky top-0">
+                    <tr>
+                      <th className="text-left px-3 py-2 font-semibold text-red-700">行号</th>
+                      <th className="text-left px-3 py-2 font-semibold text-red-700">字段</th>
+                      <th className="text-left px-3 py-2 font-semibold text-red-700">原始值</th>
+                      <th className="text-left px-3 py-2 font-semibold text-red-700">错误原因</th>
+                      <th className="text-left px-3 py-2 font-semibold text-red-700">修改建议</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importErrors.map((err, i) => (
+                      <tr key={i} className="border-t border-red-50">
+                        <td className="px-3 py-2 font-mono text-red-700">第{err.row}行</td>
+                        <td className="px-3 py-2 text-gray-700">{err.field}</td>
+                        <td className="px-3 py-2 text-gray-500 max-w-32 truncate" title={err.value || ''}>{err.value || '-'}</td>
+                        <td className="px-3 py-2 text-red-700">{err.reason || err.message}</td>
+                        <td className="px-3 py-2 text-gray-600">{err.suggestion || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { buildBossReportData, buildBossReportCsvRows, buildCsvContent } from '@/lib/boss-report-utils'
+import { createCSVHeaders } from '@/lib/csv-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,10 +14,7 @@ export async function GET(request: Request) {
     const csvContent = buildCsvContent(buildBossReportCsvRows(data))
 
     return new NextResponse(csvContent, {
-      headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="boss_report_${data.range.startDate}_${data.range.endDate}.csv"`,
-      },
+      headers: createCSVHeaders(`boss_report_${data.range.startDate}_${data.range.endDate}.csv`),
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : '导出老板汇报失败'

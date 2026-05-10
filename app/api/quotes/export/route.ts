@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { toCSVRow } from '@/lib/csv-utils'
+import {
+  createCSVResponse,
+  formatCSVBoolean,
+  formatCSVDate,
+  formatCSVNumber,
+  formatCSVPercent,
+} from '@/lib/csv-utils'
 
 const HEADERS = [
   '报价单编号', '报价单名称', '报价文件路径',
@@ -51,52 +57,38 @@ export async function GET() {
       }
     }
 
-    const csvLines = [toCSVRow(HEADERS)]
+    const rows: (string | number | null)[][] = [HEADERS]
 
     for (const item of items) {
       const sheet = item.quoteSheet
       const filePath = attachmentMap.get(item.quoteSheetId) || ''
 
-      // 税率导出：以百分数显示
-      let taxRateStr = ''
-      if (item.taxRate !== null) {
-        const rate = Number(item.taxRate)
-        taxRateStr = rate <= 1 ? `${(rate * 100).toFixed(0)}%` : `${rate}%`
-      }
-
-      csvLines.push(toCSVRow([
+      rows.push([
         sheet.quoteNumber,
         sheet.title,
         filePath,
         sheet.supplier.name,
         sheet.category.name,
-        sheet.quoteDate.toISOString().slice(0, 10),
+        formatCSVDate(sheet.quoteDate),
         sheet.quoteStage,
         sheet.sourceType,
         item.compareKey,
         item.productName,
         item.model,
         item.unit,
-        item.price !== null ? Number(item.price) : null,
-        item.includesTax ? '是' : '否',
-        taxRateStr || null,
-        item.includesFreight ? '是' : '否',
+        formatCSVNumber(item.price),
+        formatCSVBoolean(item.includesTax),
+        formatCSVPercent(item.taxRate) || null,
+        formatCSVBoolean(item.includesFreight),
         item.minOrderQty,
         item.deliveryTime,
         item.paymentTerms,
         item.warranty,
         item.priceNotes,
-      ]))
+      ])
     }
 
-    const csvContent = '\uFEFF' + csvLines.join('\n') // BOM for Excel
-
-    return new NextResponse(csvContent, {
-      headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="quotes_export_${new Date().toISOString().slice(0, 10)}.csv"`,
-      },
-    })
+    return createCSVResponse(rows, `quotes_export_${new Date().toISOString().slice(0, 10)}.csv`)
   } catch {
     return NextResponse.json({ error: '导出失败' }, { status: 500 })
   }

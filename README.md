@@ -34,8 +34,20 @@ npm run prisma:seed
 - `npm run prisma:seed` : 执行数据初始化种子脚本
 - `npm run prisma:studio` : 打开可视化的 Prisma 数据库管理界面
 
-## 7. 数据备份说明
+## 7. CSV 导入导出说明
+- 数据导入导出入口：`/data`
+- 报价明细导入模板：`/api/csv-templates?type=quote-items`
+- 供应商导入预研模板：`/api/csv-templates?type=suppliers`
+- 报价 CSV 导入入口：`/quotes` 页面中的“CSV 导入”
+
+报价明细导入采用严格事务模式：导入前会完整校验所有行，只要存在任意错误，本次导入不会写入报价单、报价明细或附件。失败时页面会展示中文错误报告，并可下载错误报告 CSV。
+
+CSV 导出统一使用中文表头、UTF-8 BOM 和标准 CSV 转义，便于 Excel 打开。当前支持报价数据、报价对比、老板汇报、销售/商务资料 CSV 导出；销售/商务资料另支持 Markdown 导出。
+
+供应商 CSV 第一版仅提供模板预研，不开放批量导入。
+
+## 8. 数据备份说明
 > 占位：目前数据全部存储于本地的 `prisma/dev.db` 及上传的附件目录中。后续版本将增加一键打包备份脚本。
 
-## 8. 常见问题
+## 9. 常见问题
 > 占位：尚未收录常见问题。

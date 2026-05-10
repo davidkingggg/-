@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getQuoteCompareData } from '@/lib/quote-compare'
 import { formatPrice } from '@/lib/price-utils'
+import { createCSVResponse, formatCSVBoolean, formatCSVDate, formatCSVPercent, type CSVValue } from '@/lib/csv-utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,7 +18,6 @@ export async function GET(request: NextRequest) {
 
     const data = await getQuoteCompareData(filter)
 
-    // Build CSV
     const headers = [
       '对比键(产品+型号)',
       '产品名称',
@@ -37,43 +37,34 @@ export async function GET(request: NextRequest) {
       '报价日期'
     ]
 
-    let csvContent = '\uFEFF' // BOM
-    csvContent += headers.join(',') + '\n'
+    const rows: CSVValue[][] = [headers]
 
     for (const group of data) {
       if (group.items.length === 0) continue
 
-      // For the first row of each group, we show the group metrics
-      // If multiple suppliers, we output multiple rows.
       group.items.forEach((item, index) => {
-        const row = [
-          index === 0 ? `"${group.compareKey.replace(/"/g, '""')}"` : '',
-          index === 0 ? `"${group.productName.replace(/"/g, '""')}"` : '',
-          index === 0 ? `"${(group.model || '').replace(/"/g, '""')}"` : '',
-          index === 0 ? `"${(group.categoryName || '').replace(/"/g, '""')}"` : '',
+        rows.push([
+          index === 0 ? group.compareKey : '',
+          index === 0 ? group.productName : '',
+          index === 0 ? group.model || '' : '',
+          index === 0 ? group.categoryName || '' : '',
           index === 0 ? formatPrice(group.minPrice) : '',
           index === 0 ? formatPrice(group.maxPrice) : '',
           index === 0 ? formatPrice(group.avgPrice) : '',
-          `"${item.supplier.name.replace(/"/g, '""')}"`,
+          item.supplier.name,
           formatPrice(item.price),
-          item.includesTax ? '是' : '否',
-          item.taxRate ? `"${item.taxRate}%"` : '',
-          item.includesFreight ? '是' : '否',
-          `"${(item.deliveryTime || '').replace(/"/g, '""')}"`,
-          `"${(item.paymentTerms || '').replace(/"/g, '""')}"`,
-          `"${(item.warranty || '').replace(/"/g, '""')}"`,
-          `"${new Date(item.quoteSheet.quoteDate).toLocaleDateString('zh-CN')}"`
-        ]
-        csvContent += row.join(',') + '\n'
+          formatCSVBoolean(item.includesTax),
+          formatCSVPercent(item.taxRate),
+          formatCSVBoolean(item.includesFreight),
+          item.deliveryTime || '',
+          item.paymentTerms || '',
+          item.warranty || '',
+          formatCSVDate(item.quoteSheet.quoteDate),
+        ])
       })
     }
 
-    return new NextResponse(csvContent, {
-      headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="quote_compare_${new Date().toISOString().split('T')[0]}.csv"`,
-      },
-    })
+    return createCSVResponse(rows, `quote_compare_${new Date().toISOString().split('T')[0]}.csv`)
   } catch (error) {
     console.error('Failed to export quote compare data:', error)
     return NextResponse.json({ error: '导出失败' }, { status: 500 })

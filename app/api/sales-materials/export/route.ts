@@ -5,6 +5,7 @@ import {
   buildSalesMaterialMarkdown,
   buildSalesMaterialWhere,
 } from '@/lib/sales-material-utils'
+import { createCSVHeaders } from '@/lib/csv-utils'
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,10 +36,7 @@ export async function GET(request: NextRequest) {
     }
 
     return new NextResponse(buildSalesMaterialCsv(materials), {
-      headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="sales_materials_${date}.csv"`,
-      },
+      headers: createCSVHeaders(`sales_materials_${date}.csv`),
     })
   } catch {
     return NextResponse.json({ error: '导出销售/商务资料失败' }, { status: 500 })

@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client'
-import { toCSVRow } from '@/lib/csv-utils'
+import { buildCSVContent, formatCSVDateTime, type CSVValue } from '@/lib/csv-utils'
 
 export const TARGET_AUDIENCES = ['销售部门', '商务总助', '安装公司', '老板', '客户', '其他'] as const
 
@@ -96,22 +96,25 @@ export function buildSalesMaterialCsv(materials: SalesMaterialLike[]) {
     '更新时间',
   ]
 
-  const rows = materials.map((material) => toCSVRow([
-    material.title,
-    material.category?.name || '',
-    material.targetAudience || '',
-    material.coreSellingPoints || '',
-    material.priceAdvantage || '',
-    material.supplierAdvantage || '',
-    material.qualificationSupport || '',
-    material.deliveryAdvantage || '',
-    material.afterSalesAdvantage || '',
-    material.riskNotice || '',
-    buildSalesMaterialPreview(material),
-    formatDateTime(material.updatedAt),
-  ]))
+  const rows: CSVValue[][] = [
+    headers,
+    ...materials.map((material) => [
+      material.title,
+      material.category?.name || '',
+      material.targetAudience || '',
+      material.coreSellingPoints || '',
+      material.priceAdvantage || '',
+      material.supplierAdvantage || '',
+      material.qualificationSupport || '',
+      material.deliveryAdvantage || '',
+      material.afterSalesAdvantage || '',
+      material.riskNotice || '',
+      buildSalesMaterialPreview(material),
+      formatDateTime(material.updatedAt),
+    ]),
+  ]
 
-  return `\uFEFF${[toCSVRow(headers), ...rows].join('\n')}`
+  return buildCSVContent(rows)
 }
 
 export function buildSalesMaterialMarkdown(materials: SalesMaterialLike[]) {
@@ -131,14 +134,5 @@ export function buildSalesMaterialMarkdown(materials: SalesMaterialLike[]) {
 }
 
 function formatDateTime(value: Date | string | undefined) {
-  if (!value) return ''
-  const date = typeof value === 'string' ? new Date(value) : value
-  if (Number.isNaN(date.getTime())) return ''
-
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hour = String(date.getHours()).padStart(2, '0')
-  const minute = String(date.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${day} ${hour}:${minute}`
+  return formatCSVDateTime(value)
 }

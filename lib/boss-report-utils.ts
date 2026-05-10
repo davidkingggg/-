@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
-import { toCSVRow } from '@/lib/csv-utils'
+import { buildCSVContent as buildUnifiedCSVContent } from '@/lib/csv-utils'
 
 type ReportSource = 'development' | 'purchase'
 type RiskLevel = 'high' | 'watch'
@@ -393,7 +393,7 @@ export function buildBossReportCsvRows(data: BossReportData) {
 }
 
 export function buildCsvContent(rows: string[][]) {
-  return `\uFEFF${rows.map((row) => toCSVRow(row)).join('\n')}\n`
+  return buildUnifiedCSVContent(rows)
 }
 
 export async function buildBossReportData(filter: BossReportFilter = {}): Promise<BossReportData> {

@@ -3,6 +3,10 @@
  * 支持严格事务模式：先校验全部行，再统一写入
  */
 
+export const CSV_BOM = '\uFEFF'
+
+export type CSVValue = string | number | boolean | null | undefined
+
 // ─── 布尔值解析 ───────────────────────────────────────────────
 const BOOLEAN_TRUE = new Set(['是', 'true', 'yes', '1'])
 const BOOLEAN_FALSE = new Set(['否', 'false', 'no', '0'])
@@ -151,30 +155,109 @@ export function parseCSVLine(line: string): string[] {
 }
 
 export function parseCSV(text: string): { headers: string[]; rows: string[][] } {
-  const lines = text.split(/\r?\n/).filter(l => l.trim() !== '')
+  const lines = normalizeCSVText(text).split(/\r?\n/).filter(l => l.trim() !== '')
   if (lines.length === 0) return { headers: [], rows: [] }
   const headers = parseCSVLine(lines[0])
   const rows = lines.slice(1).map(line => parseCSVLine(line))
   return { headers, rows }
 }
 
+export function normalizeCSVText(text: string) {
+  return text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+}
+
 // ─── 行错误类型 ────────────────────────────────────────────
 export interface RowError {
   row: number        // 行号（从 2 开始，1 是表头）
   field: string      // 字段名
-  message: string    // 中文错误原因
+  value?: string     // 原始值
+  reason?: string    // 中文错误原因
+  suggestion?: string // 修改建议
+  message?: string   // 兼容旧前端展示
 }
 
 // ─── CSV 导出 ─────────────────────────────────────────────
-export function escapeCSV(value: string | number | boolean | null | undefined): string {
+export function escapeCSV(value: CSVValue): string {
   if (value === null || value === undefined) return ''
   const str = String(value)
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
     return `"${str.replace(/"/g, '""')}"`
   }
   return str
 }
 
-export function toCSVRow(values: (string | number | boolean | null | undefined)[]): string {
+export function toCSVRow(values: CSVValue[]): string {
   return values.map(escapeCSV).join(',')
+}
+
+export function buildCSVContent(rows: CSVValue[][], options: { trailingNewline?: boolean } = {}) {
+  const content = rows.map((row) => toCSVRow(row)).join('\n')
+  return `${CSV_BOM}${content}${options.trailingNewline === false ? '' : '\n'}`
+}
+
+export function createCSVResponse(rows: CSVValue[][], fileName: string) {
+  return new Response(buildCSVContent(rows), {
+    headers: createCSVHeaders(fileName),
+  })
+}
+
+export function createCSVHeaders(fileName: string) {
+  return {
+    'Content-Type': 'text/csv; charset=utf-8',
+    'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+  }
+}
+
+export function formatCSVDate(value: Date | string | null | undefined) {
+  if (!value) return ''
+  const date = typeof value === 'string' ? new Date(value) : value
+  if (Number.isNaN(date.getTime())) return ''
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export function formatCSVDateTime(value: Date | string | null | undefined) {
+  if (!value) return ''
+  const date = typeof value === 'string' ? new Date(value) : value
+  if (Number.isNaN(date.getTime())) return ''
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hour = String(date.getHours()).padStart(2, '0')
+  const minute = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hour}:${minute}`
+}
+
+export function formatCSVBoolean(value: boolean | null | undefined) {
+  if (value === null || value === undefined) return ''
+  return value ? '是' : '否'
+}
+
+export function formatCSVNumber(value: unknown) {
+  if (value === null || value === undefined || value === '') return ''
+  const num = Number(value)
+  if (Number.isNaN(num)) return ''
+  return Number.isInteger(num) ? String(num) : String(Number(num.toFixed(6)))
+}
+
+export function formatCSVPercent(value: unknown) {
+  if (value === null || value === undefined || value === '') return ''
+  const num = Number(value)
+  if (Number.isNaN(num)) return ''
+  return num <= 1 ? `${Number((num * 100).toFixed(4))}%` : `${Number(num.toFixed(4))}%`
+}
+
+export function buildErrorReportRows(errors: RowError[]): CSVValue[][] {
+  return [
+    ['行号', '字段', '原始值', '错误原因', '修改建议'],
+    ...errors.map((error) => [
+      error.row,
+      error.field,
+      error.value || '',
+      error.reason || error.message || '',
+      error.suggestion || '',
+    ]),
+  ]
 }

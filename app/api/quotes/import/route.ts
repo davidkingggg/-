@@ -43,6 +43,7 @@ const VALID_SOURCE_TYPES = new Set(['微信', '图片', 'PDF', 'Excel', '口头'
 const VALID_QUOTE_STAGES = new Set(['初次报价', '二次议价', '最终确认价', '量大优惠价'])
 
 interface ParsedRow {
+  rowNumber: number
   quoteNumber: string | null
   title: string | null
   filePath: string | null
@@ -66,19 +67,146 @@ interface ParsedRow {
   priceNotes: string | null
 }
 
+const REQUIRED_FIELDS = [
+  { field: 'supplierName', label: '供应商名称', suggestion: '请填写系统中已存在的供应商名称。' },
+  { field: 'categoryName', label: '品类', suggestion: '请填写系统中已存在的品类名称。' },
+  { field: 'quoteDate', label: '报价日期', suggestion: '请使用 YYYY-MM-DD 格式，例如 2026-05-01。' },
+  { field: 'compareKey', label: '对比规格标识 (compareKey)', suggestion: '请填写用于同类产品横向对比的规格标识，例如 DN50 截止阀。' },
+  { field: 'productName', label: '产品名称', suggestion: '请填写产品名称。' },
+  { field: 'price', label: '报价', suggestion: '请填写数字格式的报价金额。' },
+]
+
+function rowError(row: number, field: string, value: string | undefined, reason: string, suggestion: string): RowError {
+  return {
+    row,
+    field,
+    value: value ?? '',
+    reason,
+    suggestion,
+    message: reason,
+  }
+}
+
+function validationFailure(message: string, errors: RowError[], totalRows: number, status = 400) {
+  return NextResponse.json({
+    success: false,
+    message,
+    error: message,
+    errors,
+    totalRows,
+    errorCount: errors.length,
+  }, { status })
+}
+
+function formatQuoteDateKey(value: Date) {
+  return value.toISOString().slice(0, 10)
+}
+
+function checkQuoteNumberConsistency(rows: ParsedRow[]) {
+  const errors: RowError[] = []
+  const groupedRows = new Map<string, ParsedRow[]>()
+
+  for (const row of rows) {
+    if (!row.quoteNumber) continue
+    if (!groupedRows.has(row.quoteNumber)) groupedRows.set(row.quoteNumber, [])
+    groupedRows.get(row.quoteNumber)!.push(row)
+  }
+
+  for (const [quoteNumber, groupRows] of groupedRows) {
+    const first = groupRows[0]
+    const baseline = {
+      supplierName: first.supplierName,
+      categoryName: first.categoryName,
+      quoteDate: formatQuoteDateKey(first.quoteDate),
+      quoteStage: first.quoteStage || '',
+      sourceType: first.sourceType || '',
+    }
+
+    for (const row of groupRows.slice(1)) {
+      const comparisons: Array<{
+        field: string
+        label: string
+        value: string
+        baselineValue: string
+        suggestion: string
+      }> = [
+        {
+          field: '供应商名称',
+          label: '供应商名称',
+          value: row.supplierName,
+          baselineValue: baseline.supplierName,
+          suggestion: '请把同一报价单编号下的供应商名称统一；如果确实属于不同供应商，请拆分为不同报价单编号。',
+        },
+        {
+          field: '品类',
+          label: '品类',
+          value: row.categoryName,
+          baselineValue: baseline.categoryName,
+          suggestion: '请把同一报价单编号下的品类统一；如果确实属于不同品类，请拆分为不同报价单编号。',
+        },
+        {
+          field: '报价日期',
+          label: '报价日期',
+          value: formatQuoteDateKey(row.quoteDate),
+          baselineValue: baseline.quoteDate,
+          suggestion: '请把同一报价单编号下的报价日期统一；如果确实是不同日期，请拆分为不同报价单编号。',
+        },
+        {
+          field: '报价阶段',
+          label: '报价阶段',
+          value: row.quoteStage || '',
+          baselineValue: baseline.quoteStage,
+          suggestion: '请把同一报价单编号下的报价阶段统一；如果确实是不同阶段，请拆分为不同报价单编号。',
+        },
+        {
+          field: '报价来源类型',
+          label: '报价来源类型',
+          value: row.sourceType || '',
+          baselineValue: baseline.sourceType,
+          suggestion: '请把同一报价单编号下的报价来源类型统一；如果确实是不同来源，请拆分为不同报价单编号。',
+        },
+      ]
+
+      for (const comparison of comparisons) {
+        if (comparison.value !== comparison.baselineValue) {
+          errors.push(rowError(
+            row.rowNumber,
+            comparison.field,
+            comparison.value,
+            `报价单编号「${quoteNumber}」下的${comparison.label}不一致`,
+            comparison.suggestion,
+          ))
+        }
+      }
+    }
+  }
+
+  return errors
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
     const csvText = body.csvText as string
 
     if (!csvText || !csvText.trim()) {
-      return NextResponse.json({ error: 'CSV 内容不能为空' }, { status: 400 })
+      return validationFailure('CSV 内容不能为空', [
+        rowError(1, '文件', '', 'CSV 内容不能为空', '请先下载报价明细模板，并填写至少一行报价数据。'),
+      ], 0)
     }
 
     const { headers, rows } = parseCSV(csvText)
 
+    if (headers.length === 0) {
+      return validationFailure('CSV 不包含表头', [
+        rowError(1, '表头', '', 'CSV 不包含表头', '请使用系统提供的报价明细导入模板。'),
+      ], 0)
+    }
+
     if (rows.length === 0) {
-      return NextResponse.json({ error: 'CSV 不包含数据行' }, { status: 400 })
+      return validationFailure('CSV 不包含数据行', [
+        rowError(2, '数据行', '', 'CSV 不包含数据行', '请在表头下方填写至少一行报价数据。'),
+      ], 0)
     }
 
     // 映射表头
@@ -86,6 +214,15 @@ export async function POST(request: Request) {
     for (let i = 0; i < headers.length; i++) {
       const mapped = HEADER_MAP[headers[i].trim()]
       if (mapped) fieldMap[i] = mapped
+    }
+
+    const mappedFields = new Set(Object.values(fieldMap))
+    const missingHeaders = REQUIRED_FIELDS.filter((item) => !mappedFields.has(item.field))
+    if (missingHeaders.length > 0) {
+      const errors = missingHeaders.map((item) =>
+        rowError(1, item.label, '', `缺少必需表头「${item.label}」`, `请在 CSV 表头中增加「${item.label}」列。`),
+      )
+      return validationFailure('CSV 表头缺少必需字段，请使用最新模板。', errors, rows.length)
     }
 
     // ─── 阶段 1：完整校验所有行 ──────────────────────────
@@ -102,19 +239,25 @@ export async function POST(request: Request) {
 
       // 必填校验
       if (!data.supplierName?.trim()) {
-        errors.push({ row: rowNum, field: '供应商名称', message: '供应商名称不能为空' })
+        errors.push(rowError(rowNum, '供应商名称', data.supplierName, '供应商名称不能为空', '请填写系统中已存在的供应商名称。'))
       }
       if (!data.categoryName?.trim()) {
-        errors.push({ row: rowNum, field: '品类', message: '品类不能为空' })
+        errors.push(rowError(rowNum, '品类', data.categoryName, '品类不能为空', '请填写系统中已存在的品类名称。'))
+      }
+      if (!data.compareKey?.trim()) {
+        errors.push(rowError(rowNum, '对比规格标识 (compareKey)', data.compareKey, '对比规格标识不能为空', '请填写用于报价对比的规格标识，例如 DN50 截止阀。'))
       }
       if (!data.productName?.trim()) {
-        errors.push({ row: rowNum, field: '产品名称', message: '产品名称不能为空' })
+        errors.push(rowError(rowNum, '产品名称', data.productName, '产品名称不能为空', '请填写产品名称。'))
+      }
+      if (!data.price?.trim()) {
+        errors.push(rowError(rowNum, '报价', data.price, '报价不能为空', '请填写数字格式的报价金额。'))
       }
 
       // 日期
       const dateResult = parseDateRequired(data.quoteDate)
       if (!dateResult.ok) {
-        errors.push({ row: rowNum, field: '报价日期', message: dateResult.error })
+        errors.push(rowError(rowNum, '报价日期', data.quoteDate, dateResult.error, '请使用 YYYY-MM-DD 格式，例如 2026-05-01。'))
       }
 
       // 布尔值
@@ -122,45 +265,46 @@ export async function POST(request: Request) {
         ? parseBoolean(data.includesTax)
         : { ok: true as const, value: false }
       if (!includesTaxResult.ok) {
-        errors.push({ row: rowNum, field: '是否含税', message: includesTaxResult.error })
+        errors.push(rowError(rowNum, '是否含税', data.includesTax, includesTaxResult.error, '请填写 是/否/true/false/yes/no/1/0。'))
       }
 
       const includesFreightResult = data.includesFreight?.trim()
         ? parseBoolean(data.includesFreight)
         : { ok: true as const, value: false }
       if (!includesFreightResult.ok) {
-        errors.push({ row: rowNum, field: '是否含运费', message: includesFreightResult.error })
+        errors.push(rowError(rowNum, '是否含运费', data.includesFreight, includesFreightResult.error, '请填写 是/否/true/false/yes/no/1/0。'))
       }
 
       // 税率
       const taxRateResult = parseTaxRate(data.taxRate)
       if (!taxRateResult.ok) {
-        errors.push({ row: rowNum, field: '税率', message: taxRateResult.error })
+        errors.push(rowError(rowNum, '税率', data.taxRate, taxRateResult.error, '请填写 13%、13、0.13，或留空。'))
       }
 
       // 报价金额
       const priceResult = parseDecimal(data.price)
       if (!priceResult.ok) {
-        errors.push({ row: rowNum, field: '报价', message: priceResult.error })
+        errors.push(rowError(rowNum, '报价', data.price, priceResult.error, '请填写数字格式的报价金额，例如 1280 或 1280.50。'))
       }
 
       // 最小起订量
       const moqResult = parseInt(data.minOrderQty)
       if (!moqResult.ok) {
-        errors.push({ row: rowNum, field: '最小起订量', message: moqResult.error })
+        errors.push(rowError(rowNum, '最小起订量', data.minOrderQty, moqResult.error, '请填写整数，或留空。'))
       }
 
       // 枚举校验
       if (data.sourceType?.trim() && !VALID_SOURCE_TYPES.has(data.sourceType.trim())) {
-        errors.push({ row: rowNum, field: '报价来源类型', message: `无效值「${data.sourceType}」，可选：${[...VALID_SOURCE_TYPES].join('、')}` })
+        errors.push(rowError(rowNum, '报价来源类型', data.sourceType, `无效值「${data.sourceType}」`, `可选值：${[...VALID_SOURCE_TYPES].join('、')}。`))
       }
       if (data.quoteStage?.trim() && !VALID_QUOTE_STAGES.has(data.quoteStage.trim())) {
-        errors.push({ row: rowNum, field: '报价阶段', message: `无效值「${data.quoteStage}」，可选：${[...VALID_QUOTE_STAGES].join('、')}` })
+        errors.push(rowError(rowNum, '报价阶段', data.quoteStage, `无效值「${data.quoteStage}」`, `可选值：${[...VALID_QUOTE_STAGES].join('、')}。`))
       }
 
       // 如果该行没有错误，暂存已解析的行
       if (errors.filter(e => e.row === rowNum).length === 0) {
         parsedRows.push({
+          rowNumber: rowNum,
           quoteNumber: data.quoteNumber?.trim() || null,
           title: data.title?.trim() || null,
           filePath: data.filePath?.trim() || null,
@@ -169,7 +313,7 @@ export async function POST(request: Request) {
           quoteDate: (dateResult as { ok: true; value: Date }).value,
           quoteStage: data.quoteStage?.trim() || null,
           sourceType: data.sourceType?.trim() || null,
-          compareKey: data.compareKey?.trim() || data.productName.trim(),
+          compareKey: data.compareKey.trim(),
           productName: data.productName.trim(),
           model: data.model?.trim() || null,
           unit: data.unit?.trim() || null,
@@ -186,14 +330,14 @@ export async function POST(request: Request) {
       }
     }
 
+    const quoteNumberConsistencyErrors = checkQuoteNumberConsistency(parsedRows)
+    if (quoteNumberConsistencyErrors.length > 0) {
+      errors.push(...quoteNumberConsistencyErrors)
+    }
+
     // 如果有任何错误，全部失败
     if (errors.length > 0) {
-      return NextResponse.json({
-        error: '导入校验失败，请修正后重试',
-        errors,
-        totalRows: rows.length,
-        errorCount: errors.length,
-      }, { status: 400 })
+      return validationFailure('导入校验失败，请修正后重试。本次导入未写入任何数据。', errors, rows.length)
     }
 
     // ─── 阶段 2：数据库校验（供应商、品类是否存在） ──────────
@@ -212,25 +356,89 @@ export async function POST(request: Request) {
     })
     const categoryMap = new Map(categories.map(c => [c.name, c.id]))
 
+    const quoteNumbers = [...new Set(parsedRows.map((row) => row.quoteNumber).filter((value): value is string => Boolean(value)))]
+    const existingQuoteSheets = quoteNumbers.length > 0
+      ? await prisma.quoteSheet.findMany({
+        where: { quoteNumber: { in: quoteNumbers } },
+        include: {
+          supplier: { select: { name: true } },
+          category: { select: { name: true } },
+        },
+      })
+      : []
+    const quoteSheetMap = new Map(existingQuoteSheets.map((sheet) => [sheet.quoteNumber || '', sheet]))
+
+    for (const [quoteNumber, groupRows] of (() => {
+      const map = new Map<string, ParsedRow[]>()
+      for (const row of parsedRows) {
+        if (!row.quoteNumber) continue
+        if (!map.has(row.quoteNumber)) map.set(row.quoteNumber, [])
+        map.get(row.quoteNumber)!.push(row)
+      }
+      return map
+    })()) {
+      const sheet = quoteSheetMap.get(quoteNumber)
+      if (!sheet) continue
+      const first = groupRows[0]
+      const mismatches: Array<{ field: string; value: string; reason: string; suggestion: string }> = []
+      if (sheet.supplier.name !== first.supplierName) {
+        mismatches.push({
+          field: '供应商名称',
+          value: first.supplierName,
+          reason: `报价单编号「${quoteNumber}」已存在于系统中，但对应的供应商名称不一致`,
+          suggestion: `请将 CSV 中报价单编号「${quoteNumber}」对应的供应商名称修改为「${sheet.supplier.name}」，或更换一个新的报价单编号。`,
+        })
+      }
+      if (sheet.category.name !== first.categoryName) {
+        mismatches.push({
+          field: '品类',
+          value: first.categoryName,
+          reason: `报价单编号「${quoteNumber}」已存在于系统中，但对应的品类不一致`,
+          suggestion: `请将 CSV 中报价单编号「${quoteNumber}」对应的品类修改为「${sheet.category.name}」，或更换一个新的报价单编号。`,
+        })
+      }
+      if (formatQuoteDateKey(sheet.quoteDate) !== formatQuoteDateKey(first.quoteDate)) {
+        mismatches.push({
+          field: '报价日期',
+          value: formatQuoteDateKey(first.quoteDate),
+          reason: `报价单编号「${quoteNumber}」已存在于系统中，但对应的报价日期不一致`,
+          suggestion: `请将 CSV 中报价单编号「${quoteNumber}」对应的报价日期修改为「${formatQuoteDateKey(sheet.quoteDate)}」，或更换一个新的报价单编号。`,
+        })
+      }
+      if ((sheet.quoteStage || '') !== (first.quoteStage || '')) {
+        mismatches.push({
+          field: '报价阶段',
+          value: first.quoteStage || '',
+          reason: `报价单编号「${quoteNumber}」已存在于系统中，但对应的报价阶段不一致`,
+          suggestion: `请将 CSV 中报价单编号「${quoteNumber}」对应的报价阶段修改为「${sheet.quoteStage || '空'}」，或更换一个新的报价单编号。`,
+        })
+      }
+      if ((sheet.sourceType || '') !== (first.sourceType || '')) {
+        mismatches.push({
+          field: '报价来源类型',
+          value: first.sourceType || '',
+          reason: `报价单编号「${quoteNumber}」已存在于系统中，但对应的报价来源类型不一致`,
+          suggestion: `请将 CSV 中报价单编号「${quoteNumber}」对应的报价来源类型修改为「${sheet.sourceType || '空'}」，或更换一个新的报价单编号。`,
+        })
+      }
+      if (mismatches.length > 0) {
+        errors.push(...mismatches.map((item) => rowError(groupRows[0].rowNumber, item.field, item.value, item.reason, item.suggestion)))
+      }
+    }
+
     // 检查不存在的供应商和品类
     for (let ri = 0; ri < parsedRows.length; ri++) {
       const row = parsedRows[ri]
-      const rowNum = ri + 2
       if (!supplierMap.has(row.supplierName)) {
-        errors.push({ row: rowNum, field: '供应商名称', message: `供应商「${row.supplierName}」不存在` })
+        errors.push(rowError(row.rowNumber, '供应商名称', row.supplierName, `供应商「${row.supplierName}」不存在`, '请先在供应商库新增该供应商，或修改为已有供应商名称。'))
       }
       if (!categoryMap.has(row.categoryName)) {
-        errors.push({ row: rowNum, field: '品类', message: `品类「${row.categoryName}」不存在` })
+        errors.push(rowError(row.rowNumber, '品类', row.categoryName, `品类「${row.categoryName}」不存在`, '请先在品类中心新增该品类，或修改为已有品类名称。'))
       }
     }
 
     if (errors.length > 0) {
-      return NextResponse.json({
-        error: '导入校验失败：存在不匹配的供应商或品类',
-        errors,
-        totalRows: rows.length,
-        errorCount: errors.length,
-      }, { status: 400 })
+      return validationFailure('导入校验失败：存在不匹配的供应商或品类。本次导入未写入任何数据。', errors, rows.length)
     }
 
     // ─── 阶段 3：在事务中写入数据 ──────────────────────────
