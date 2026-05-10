@@ -48,5 +48,10 @@ next-env.d.ts
 
 /app/generated/prisma
 
+# local database backups
+/backups/*
+!/backups/.gitkeep
+!/backups/README.md
+
 # scratch scripts
 /scratch

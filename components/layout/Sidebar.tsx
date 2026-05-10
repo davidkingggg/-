@@ -19,6 +19,7 @@ const menuItems = [
   { name: '人员管理', path: '/people' },
   { name: '数据导入导出', path: '/data' },
   { name: '数据质量', path: '/data-quality' },
+  { name: '本地备份恢复', path: '/backup' },
   { name: '系统设置', path: '/settings' },
 ];
 
