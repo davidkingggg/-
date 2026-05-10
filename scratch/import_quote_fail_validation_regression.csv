@@ -1,0 +1,5 @@
+报价单编号,报价单名称,报价文件路径,供应商名称,品类,报价日期,报价阶段,报价来源类型,对比规格标识 (compareKey),产品名称,型号规格,单位,报价,是否含税,税率,是否含运费,最小起订量,交期,付款条件,质保期,价格备注
+REG-8D3-FAIL-VALIDATION,8D-3 格式失败样例,D:/采购资料/回归样例/should-not-write-validation.pdf,无锡某管件厂,管件,2026-05-10,初次报价,PDF,,8D-3 缺少 compareKey,DN50,个,28,是,13%,否,10,3天,现款,1年,
+REG-8D3-FAIL-VALIDATION,8D-3 格式失败样例,D:/采购资料/回归样例/should-not-write-validation.pdf,无锡某管件厂,管件,2026-05-10,初次报价,PDF,8D3-非法布尔,8D-3 非法布尔,DN80,片,45,maybe,13%,否,5,3天,现款,1年,
+REG-8D3-FAIL-VALIDATION,8D-3 格式失败样例,D:/采购资料/回归样例/should-not-write-validation.pdf,无锡某管件厂,管件,2026-05-10,初次报价,PDF,8D3-非法税率,8D-3 非法税率,DN100,片,abc,是,200%,否,5,3天,现款,1年,
+REG-8D3-FAIL-VALIDATION,8D-3 格式失败样例,D:/采购资料/回归样例/should-not-write-validation.pdf,无锡某管件厂,管件,2026-05-10,初次报价,PDF,8D3-非法起订量,8D-3 非法起订量,DN125,片,60,是,13%,否,1.5,3天,现款,1年,

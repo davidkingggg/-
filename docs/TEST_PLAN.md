@@ -68,6 +68,24 @@
 - [ ] 供应商详情页中，能否清晰看到该供应商关联的所有采购记录
 - [ ] 待办中心能否正确聚合展示（采购/开发/行政）即将到期或需决策的事项
 
+## 8D-3. CSV 导入导出回归样例库测试
+- [ ] 执行回归脚本前，先运行 `npm run prisma:seed`，确保本地开发数据库处于可预期状态
+- [ ] 明确成功导入样例会写入本地开发数据库；执行后如需恢复干净状态，可重新运行 `npm run prisma:seed` 或恢复数据库备份
+- [ ] `scratch/import_quote_success_regression.csv` 能否成功导入，并创建 2 条 QuoteSheet、3 条 QuoteItem、1 条 Attachment
+- [ ] 成功样例能否覆盖固定 `quoteNumber` 多行合并、无编号报价自动归组、报价文件路径附件创建
+- [ ] 成功样例能否覆盖供应商、品类、报价日期、报价阶段、报价来源类型、compareKey、产品名称、型号规格、单位、报价、最小起订量、交期、付款条件、质保期、价格备注
+- [ ] 成功样例能否覆盖布尔值 `是`、`否`、`true`、`1` 和税率 `13%`、`0.13`、`13`
+- [ ] 固定 `quoteNumber` 成功样例重复执行前，是否已重新 seed 或恢复数据库；不要为重复执行修改导入业务逻辑
+- [ ] `scratch/import_quote_fail_validation_regression.csv` 能否验证格式类错误整文件失败，且不产生 QuoteSheet、QuoteItem、Attachment 部分写入
+- [ ] 格式失败样例能否覆盖缺少必填 `compareKey`、非法布尔值、非法税率、非法报价数字、非法最小起订量
+- [ ] `scratch/import_quote_fail_reference_regression.csv` 能否验证引用/冲突类错误整文件失败，且不产生 QuoteSheet、QuoteItem、Attachment 部分写入
+- [ ] 引用/冲突失败样例能否覆盖不存在供应商、不存在品类、与系统已有 `quoteNumber` 关键字段冲突
+- [ ] `scratch/test_csv_api.ts` 能否通过 `process.env.BASE_URL ?? "http://localhost:3000"` 调用本地服务，并输出样例用途、预期结果、失败不写入验证结果
+- [ ] CSV 样例文件本身是否没有注释行，样例用途、字段覆盖、预期结果仅写入本文档或脚本输出
+- [ ] 本阶段是否未提交未跟踪的 `scratch/export_test.csv`
+- [ ] 供应商 CSV 是否仍仅提供预研模板，未开放正式导入
+- [ ] 本阶段是否未新增导入类型、未修改 CSV 导入业务逻辑、未修改 Prisma schema、未新增 migration、未修改 seed、未进入第 9 阶段
+
 ## 9. 销售/商务资料测试
 - [ ] 能否新增销售/商务资料
 - [ ] 能否按品类筛选资料
