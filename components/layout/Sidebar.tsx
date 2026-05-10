@@ -21,6 +21,7 @@ const menuItems = [
   { name: '数据质量', path: '/data-quality' },
   { name: '本地备份恢复', path: '/backup' },
   { name: '归档管理', path: '/archive' },
+  { name: '附件路径中心', path: '/attachments' },
   { name: '系统设置', path: '/settings' },
 ];
 
