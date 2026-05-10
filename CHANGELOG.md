@@ -2,6 +2,25 @@
 
 所有该项目的显著更改都将记录在此文件中。
 
+## [0.8.4] - 2026-05-10
+
+### Added
+- **归档数据查看与恢复 (Phase 8D-4)**:
+  - 新增 `/archive` 统一归档数据管理页面，支持按 10 种对象类型筛选已归档记录。
+  - 新增 `GET /api/archive`，`type` 可选参数；不传返回全部已归档记录，传入时按白名单校验。
+  - 新增 `POST /api/archive/[type]/[id]/restore`，支持恢复单条已归档记录，含确认短语校验。
+  - 恢复操作使用局部 `RestoreArchiveDialog`，需输入"确认恢复"短语。
+  - 恢复 QuoteSheet 时提示不会自动恢复其下已归档的报价明细或附件记录。
+  - 恢复 QuoteItem 时提示不会自动恢复所属报价单，如报价单仍归档该明细可能仍不可见。
+  - 恢复 SupplierScore 后调用既有 `syncSupplierRecommendedLevel` 同步供应商推荐等级。
+  - 导航菜单新增"归档管理"入口。
+
+### Unchanged
+- 不覆盖 SupplierContact、Attachment。
+- 不批量恢复、不批量删除、不物理删除、不自动恢复、不级联恢复其他归档记录。
+- 不修改已有列表页面的默认隐藏归档行为。
+- 未新增数据库表、未修改 Prisma schema、未新增 migration、未修改 seed。
+
 ## [0.8.3] - 2026-05-10
 
 ### Added
