@@ -18,6 +18,7 @@ const menuItems = [
   { name: '行政事项', path: '/admin-tasks' },
   { name: '人员管理', path: '/people' },
   { name: '数据导入导出', path: '/data' },
+  { name: '数据质量', path: '/data-quality' },
   { name: '系统设置', path: '/settings' },
 ];
 
