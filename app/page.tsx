@@ -3,6 +3,8 @@ import DashboardCard from '@/components/dashboard/DashboardCard'
 import { buildDashboardData } from '@/lib/dashboard-utils'
 import type { TaskItem } from '@/lib/task-aggregation'
 
+export const dynamic = 'force-dynamic'
+
 function formatDate(value?: string) {
   if (!value) return '未设置'
   const date = new Date(value)
@@ -77,35 +79,25 @@ export default async function Home() {
       <section>
         <SectionHeader title="核心概览" subtitle="推荐/备选供应商数仅统计未归档且等级为 A优先推荐或 B备选的供应商。" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <DashboardCard label="推荐/备选供应商数" value={data.summary.recommendedSupplierCount} tone="blue" description="Supplier.isArchived=false，且推荐等级为 A 或 B" />
-          <DashboardCard label="有效品类数" value={data.summary.activeCategoryCount} tone="emerald" description="未归档品类" />
-          <DashboardCard label="已收录报价单" value={data.summary.quoteSheetCount} tone="violet" description="未归档报价单" />
-          <DashboardCard label="进行中主线流程" value={data.summary.openMainlineProcessCount} tone="amber" description="开发流程 + 采购流程，排除行政事项" />
+          <DashboardCard label="供应商总数" value={data.summary.supplierCount} tone="blue" description="未归档供应商" />
+          <DashboardCard label="推荐/备选供应商数" value={data.summary.recommendedSupplierCount} tone="emerald" description="未归档，且推荐等级为 A优先推荐或 B备选" />
+          <DashboardCard label="品类总数" value={data.summary.categoryCount} tone="violet" description="未归档品类" />
+          <DashboardCard label="报价单数量" value={data.summary.quoteSheetCount} tone="amber" description="未归档报价单" />
+          <DashboardCard label="销售/商务资料数量" value={data.summary.salesMaterialCount} tone="slate" description="未归档销售资料" />
+          <DashboardCard label="综合本周待办" value={data.summary.weekTodoCount} tone="blue" description="与待办中心一致，包含行政事项" />
+          <DashboardCard label="综合超期待办" value={data.summary.overdueTodoCount} tone="red" description="与待办中心一致，包含行政事项" />
+          <DashboardCard label="需老板决策事项数" value={data.summary.bossDecisionCount} tone="amber" description="与待办中心一致" />
         </div>
       </section>
 
       <section>
         <SectionHeader title="平台主线工作" subtitle="供应商开发与采购执行的主线看板；行政事项不会进入这里的风险统计。" />
         <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
-          <DashboardCard label="开发进行中" value={data.mainline.openDevelopmentCount} tone="blue" />
-          <DashboardCard label="采购进行中" value={data.mainline.openPurchaseCount} tone="emerald" />
+          <DashboardCard label="供应商开发进行中" value={data.mainline.developmentInProgressCount} tone="blue" />
+          <DashboardCard label="采购执行进行中" value={data.mainline.purchaseInProgressCount} tone="emerald" />
+          <DashboardCard label="采购异常/暂停" value={data.mainline.purchaseIssueCount} tone="red" />
           <DashboardCard label="本周主线待办" value={data.mainline.weekCount} tone="amber" />
           <DashboardCard label="主线超期待办" value={data.mainline.overdueCount} tone="red" />
-          <DashboardCard label="待老板决策" value={data.mainline.bossDecisionCount} tone="slate" />
-        </div>
-        <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <div>
-            <SectionHeader title="本周主线待办" subtitle="口径与待办中心一致，排除行政事项。" />
-            <TaskList items={data.mainline.weekItems} emptyText="本周暂无主线待办" />
-          </div>
-          <div>
-            <SectionHeader title="主线超期待办" subtitle="仅开发流程和采购流程，避免行政事项被误判为供应链风险。" />
-            <TaskList items={data.mainline.overdueItems} emptyText="当前暂无主线超期待办" />
-          </div>
-          <div>
-            <SectionHeader title="老板决策事项" subtitle="来自未关闭的开发/采购流程，口径与待办中心保持一致。" />
-            <TaskList items={data.mainline.bossDecisionItems} emptyText="当前暂无老板决策事项" />
-          </div>
         </div>
       </section>
 
@@ -122,12 +114,28 @@ export default async function Home() {
       </section>
 
       <section>
-        <SectionHeader title="综合待办口径" subtitle="以下数字与待办中心一致，其中本周待办和超期待办包含行政事项；供应链主线风险请看上方主线区。" />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <DashboardCard label="本周待办" value={data.summary.weekTodoCount} tone="amber" />
-          <DashboardCard label="超期待办" value={data.summary.overdueTodoCount} tone="red" />
-          <DashboardCard label="老板决策" value={data.summary.bossDecisionCount} tone="slate" />
-          <DashboardCard label="行政事项" value={data.summary.adminTodoCount} tone="blue" />
+        <SectionHeader title="近期重点事项" subtitle="本周和超期待办为综合口径，可能包含行政事项；采购异常/暂停单独展示，避免误作为行政工作。" />
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <div>
+            <SectionHeader title="本周待办摘要" subtitle="与待办中心一致，包含平台主线和行政事项。" />
+            <TaskList items={data.todos.weekItems} emptyText="本周暂无待办" />
+          </div>
+          <div>
+            <SectionHeader title="超期待办摘要" subtitle="与待办中心一致；行政事项会明确显示为行政事项。" />
+            <TaskList items={data.todos.overdueItems} emptyText="当前暂无超期待办" />
+          </div>
+          <div>
+            <SectionHeader title="需老板决策事项摘要" subtitle="来自开发与采购流程，口径与待办中心保持一致。" />
+            <TaskList items={data.todos.bossDecisionItems} emptyText="当前暂无需老板决策事项" />
+          </div>
+          <div>
+            <SectionHeader title="采购异常/暂停摘要" subtitle="仅采购执行流程状态为异常或暂停的事项。" />
+            <TaskList items={data.mainline.purchaseIssueItems} emptyText="当前暂无采购异常/暂停事项" />
+          </div>
+          <div>
+            <SectionHeader title="行政事项摘要" subtitle="行政事项独立展示，不计入供应链主线风险。" />
+            <TaskList items={data.admin.items} emptyText="当前暂无行政事项" />
+          </div>
         </div>
       </section>
     </div>
