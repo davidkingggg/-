@@ -2,6 +2,27 @@
 
 所有该项目的显著更改都将记录在此文件中。
 
+## [0.9.2] - 2026-05-10
+
+### Added
+- **品类商务支持资料包 (Phase 9C)**:
+  - 新增 `/category-package` 页面，按单个品类聚合 6 个区块：品类概况、推荐供应商、报价概览、供应商评分与风险、销售/商务资料、老板决策与下一步建议。
+  - 新增 `GET /api/category-package`，接受 `categoryId`、`quoteStartDate`、`quoteEndDate`、`includeNotes` 参数。
+  - 新增 `GET /api/category-package/export`，支持 `format=markdown` 和 `format=csv` 导出。
+  - Markdown 导出使用 `Content-Type: text/markdown; charset=utf-8`；CSV 导出使用 UTF-8 BOM、中文表头和标准 CSV 转义。
+  - CSV 导出行粒度为一供应商一行，报价字段取最低价，评分字段取最新评分。
+  - `includeNotes=false` 时隐藏内部备注、风险摘要、当前问题等字段；风险标签、推荐等级、评分等级始终展示。
+  - 老板决策事项口径：`needBossDecision=true`、`isArchived=false`、状态未关闭（开发排除已完成/淘汰，采购排除已完成）。
+  - 页面支持 Markdown 预览/源码切换、复制 Markdown 到剪贴板。
+  - 附件路径仅作为数据库路径记录引用，不读取、不校验真实文件。
+
+### Unchanged
+- 不做 AI 自动总结。
+- 不做 Word/PDF/PPT/ZIP 导出，不打包真实附件。
+- 不新增数据库表、未修改 Prisma schema、未新增 migration、未修改 seed。
+- 不做多品类/客户/项目维度资料包。
+- 不进入第 10 阶段。
+
 ## [0.9.1] - 2026-05-10
 
 ### Added

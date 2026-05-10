@@ -22,6 +22,7 @@ const menuItems = [
   { name: '本地备份恢复', path: '/backup' },
   { name: '归档管理', path: '/archive' },
   { name: '附件路径中心', path: '/attachments' },
+  { name: '品类资料包', path: '/category-package' },
   { name: '系统设置', path: '/settings' },
 ];
 
