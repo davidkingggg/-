@@ -13,6 +13,16 @@ interface Contact {
   id: string; name: string; position: string | null; phone: string | null
   wechat: string | null; email: string | null; isPrimary: boolean; notes: string | null
 }
+interface AttachmentRecord {
+  id: string
+  relatedType: string
+  relatedId: string
+  fileName: string
+  filePath: string
+  fileType: string | null
+  notes: string | null
+  createdAt: string
+}
 interface Supplier {
   id: string; name: string; categoryId: string
   category: { id: string; name: string }
@@ -32,7 +42,7 @@ const COOPERATION = ['强', '一般', '弱', '未确认']
 const PRICE_LEVELS = ['高', '中', '低', '未知']
 const REC_LEVELS = ['A优先推荐', 'B备选', 'C暂不推荐', '未评级']
 
-const TABS = ['基本信息', '联系人', '风险与备注', '关联报价', '评分与考察', '开发进度', '采购执行']
+const TABS = ['基本信息', '联系人', '风险与备注', '关联报价', '附件管理', '评分与考察', '开发进度', '采购执行']
 
 export default function SupplierDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -328,9 +338,10 @@ export default function SupplierDetailPage() {
 
       {/* Tab 3: 关联报价 */}
       {activeTab === 3 && <SupplierQuotesTab supplierId={id} />}
-      {activeTab === 4 && <SupplierScoresAndInvestigationsTab supplier={supplier} />}
-      {activeTab === 5 && <SupplierDevelopmentTab supplier={supplier} />}
-      {activeTab === 6 && <SupplierPurchaseTab supplier={supplier} />}
+      {activeTab === 4 && <SupplierAttachmentsTab supplierId={id} />}
+      {activeTab === 5 && <SupplierScoresAndInvestigationsTab supplier={supplier} />}
+      {activeTab === 6 && <SupplierDevelopmentTab supplier={supplier} />}
+      {activeTab === 7 && <SupplierPurchaseTab supplier={supplier} />}
     </div>
   )
 }
@@ -383,6 +394,200 @@ function SupplierQuotesTab({ supplierId }: { supplierId: string }) {
           </tbody>
         </table>
       )}
+    </div>
+  )
+}
+
+function SupplierAttachmentsTab({ supplierId }: { supplierId: string }) {
+  const { showToast } = useToast()
+  const [attachments, setAttachments] = useState<AttachmentRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [attModal, setAttModal] = useState(false)
+  const [attForm, setAttForm] = useState({ filePath: '', fileName: '', fileType: '', notes: '' })
+  const [archiveTarget, setArchiveTarget] = useState<AttachmentRecord | null>(null)
+
+  useEffect(() => {
+    let ignore = false
+
+    async function loadAttachments() {
+      setLoading(true)
+      try {
+        const params = new URLSearchParams({
+          relatedType: 'Supplier',
+          relatedId: supplierId,
+        })
+        const res = await fetch(`/api/attachments?${params.toString()}`)
+        if (!res.ok) throw new Error()
+        const data = await res.json()
+        if (!ignore) {
+          setAttachments(data.records || [])
+        }
+      } catch {
+        if (!ignore) showToast('获取供应商附件记录失败', 'error')
+      } finally {
+        if (!ignore) setLoading(false)
+      }
+    }
+
+    loadAttachments()
+    return () => { ignore = true }
+  }, [supplierId, reloadKey, showToast])
+
+  async function saveAttachment(e: React.FormEvent) {
+    e.preventDefault()
+    try {
+      const res = await fetch('/api/attachments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          relatedType: 'Supplier',
+          relatedId: supplierId,
+          filePath: attForm.filePath,
+          fileName: attForm.fileName,
+          fileType: attForm.fileType,
+          notes: attForm.notes,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error)
+      }
+      showToast('附件路径记录已添加', 'success')
+      setAttModal(false)
+      setAttForm({ filePath: '', fileName: '', fileType: '', notes: '' })
+      setReloadKey((k) => k + 1)
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '添加附件路径失败', 'error')
+    }
+  }
+
+  async function doArchiveAttachment() {
+    if (!archiveTarget) return
+    try {
+      const res = await fetch(`/api/attachments/${archiveTarget.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archive: true }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error)
+      }
+      showToast('附件记录已归档', 'success')
+      setArchiveTarget(null)
+      setReloadKey((k) => k + 1)
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '归档附件失败', 'error')
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
+        本功能仅维护数据库附件路径记录，不上传、不下载、不预览、不校验真实文件。
+      </p>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold text-gray-800">附件列表</h2>
+        <button onClick={() => setAttModal(true)} className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+          + 添加附件路径
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="text-gray-400 text-center py-8">加载中...</div>
+      ) : attachments.length === 0 ? (
+        <div className="text-gray-400 text-center py-8">暂无附件记录</div>
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b">
+              <th className="text-left px-4 py-3 font-semibold text-gray-600">文件名</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600">路径</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600">类型</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600">备注</th>
+              <th className="text-left px-4 py-3 font-semibold text-gray-600">创建时间</th>
+              <th className="text-right px-4 py-3 font-semibold text-gray-600">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {attachments.map((att) => (
+              <tr key={att.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                <td className="px-4 py-3 font-medium">{att.fileName}</td>
+                <td className="px-4 py-3 text-gray-500 text-xs font-mono max-w-xs truncate" title={att.filePath}>
+                  {att.filePath}
+                </td>
+                <td className="px-4 py-3 text-gray-600">{att.fileType || '-'}</td>
+                <td className="px-4 py-3 text-gray-600">{att.notes || '-'}</td>
+                <td className="px-4 py-3 text-gray-600">{new Date(att.createdAt).toLocaleString('zh-CN')}</td>
+                <td className="px-4 py-3 text-right">
+                  <button onClick={() => setArchiveTarget(att)} className="text-red-500 hover:text-red-700 text-xs font-medium">
+                    移除记录
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <Modal open={attModal} onClose={() => setAttModal(false)} title="添加附件路径">
+        <form onSubmit={saveAttachment} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">文件路径 <span className="text-red-500">*</span></label>
+            <input
+              type="text"
+              value={attForm.filePath}
+              onChange={(e) => setAttForm({ ...attForm, filePath: e.target.value })}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              required
+              placeholder="本地文件路径"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">文件名</label>
+            <input
+              type="text"
+              value={attForm.fileName}
+              onChange={(e) => setAttForm({ ...attForm, fileName: e.target.value })}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              placeholder="留空时将按路径自动推导"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">文件类型</label>
+            <input
+              type="text"
+              value={attForm.fileType}
+              onChange={(e) => setAttForm({ ...attForm, fileType: e.target.value })}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              placeholder="如 pdf、xlsx；留空时自动推导"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+            <input
+              type="text"
+              value={attForm.notes}
+              onChange={(e) => setAttForm({ ...attForm, notes: e.target.value })}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={() => setAttModal(false)} className="px-4 py-2 text-sm bg-gray-100 rounded-lg hover:bg-gray-200">取消</button>
+            <button type="submit" className="px-5 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700">保存</button>
+          </div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog
+        open={!!archiveTarget}
+        onClose={() => setArchiveTarget(null)}
+        onConfirm={doArchiveAttachment}
+        title="确认移除附件记录"
+        message={`确定要移除附件记录「${archiveTarget?.fileName || archiveTarget?.filePath || '(无名称)'}」吗？此操作不会删除物理文件。`}
+        confirmText="确认移除"
+      />
     </div>
   )
 }
