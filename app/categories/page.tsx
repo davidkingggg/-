@@ -156,7 +156,7 @@ export default function CategoriesPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[22px] font-bold text-[#0f172a]">品类中心</h1>
-          <p className="text-[13px] text-slate-400 mt-0.5">管理锅炉行业重点采购品类</p>
+          <p className="text-[13px] text-slate-400 mt-0.5">管理重点采购品类与供应商关联</p>
         </div>
         <button
           onClick={openCreate}

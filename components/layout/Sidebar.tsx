@@ -56,8 +56,8 @@ export default function Sidebar() {
         <div className="flex items-center gap-2.5">
           <span className="text-xl">🏭</span>
           <div>
-            <h2 className="text-[15px] font-bold text-white tracking-wide">集成采购平台</h2>
-            <p className="text-[11px] text-slate-500 mt-0.5">本地工作库</p>
+            <h2 className="text-[15px] font-bold text-white tracking-wide">供采管家</h2>
+            <p className="text-[11px] text-slate-500 mt-0.5">本地优先 · 供应商与采购管理</p>
           </div>
         </div>
       </div>

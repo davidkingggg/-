@@ -5,7 +5,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { BossReportData, BossReportItem, BossReportRiskItem } from '@/lib/boss-report-utils'
 
-type LoadState = 'idle' | 'loading' | 'error'
+type PageState =
+  | { tag: 'idle' }
+  | { tag: 'loading' }
+  | { tag: 'error'; message: string }
 
 function todayInput(date: Date) {
   const year = date.getFullYear()
@@ -140,23 +143,20 @@ export default function BossReportPage() {
   const [startDate, setStartDate] = useState(week.startDate)
   const [endDate, setEndDate] = useState(week.endDate)
   const [data, setData] = useState<BossReportData | null>(null)
-  const [state, setState] = useState<LoadState>('idle')
-  const [error, setError] = useState('')
+  const [pageState, setPageState] = useState<PageState>({ tag: 'idle' })
   const [copied, setCopied] = useState(false)
 
   const loadReport = useCallback(async () => {
-    setState('loading')
-    setError('')
+    setPageState({ tag: 'loading' })
     try {
       const params = new URLSearchParams({ startDate, endDate })
       const response = await fetch(`/api/boss-report?${params.toString()}`)
       const payload = await response.json()
       if (!response.ok) throw new Error(payload.error || '加载失败')
       setData(payload)
-      setState('idle')
+      setPageState({ tag: 'idle' })
     } catch (err) {
-      setError(err instanceof Error ? err.message : '加载失败')
-      setState('error')
+      setPageState({ tag: 'error', message: err instanceof Error ? err.message : '加载失败' })
     }
   }, [startDate, endDate])
 
@@ -234,9 +234,9 @@ export default function BossReportPage() {
         </div>
       </div>
 
-      {state === 'error' && <div className="mt-6 bg-red-50 text-red-700 border border-red-100 rounded-xl p-4">{error}</div>}
+      {pageState.tag === 'error' && <div className="mt-6 bg-red-50 text-red-700 border border-red-100 rounded-xl p-4">{pageState.message}</div>}
 
-      {state === 'loading' && !data && (
+      {pageState.tag === 'loading' && !data && (
         <div className="mt-16 text-center">
           <div className="inline-block w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
           <p className="text-sm text-gray-400 mt-3">加载经营数据...</p>
@@ -385,10 +385,10 @@ export default function BossReportPage() {
             </div>
           </Section>
 
-          {/* Report Preview */}
+          {/* Report Preview — renders data.markdown directly as single source of truth */}
           <Section
             title="采购经营简报"
-            subtitle="结构化报告预览，可复制或导出。"
+            subtitle="以下内容与「复制内容」一致，可直接预览导出效果。"
             action={
               <div className="flex gap-2">
                 <button onClick={copyMarkdown} disabled={!data} className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm disabled:opacity-50">
@@ -407,87 +407,7 @@ export default function BossReportPage() {
                   <span className="text-sm font-medium text-gray-700">采购经营简报 · {data.range.label}</span>
                 </div>
               </div>
-              <div className="px-6 py-5 space-y-4 text-sm text-gray-700 leading-relaxed">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">一、核心概览</h4>
-                  <ul className="space-y-1 text-gray-600 ml-4">
-                    <li>开发进展：{data.summary.developmentProgressCount} 项</li>
-                    <li>采购进展：{data.summary.purchaseProgressCount} 项</li>
-                    <li>待决策：{data.summary.bossDecisionCount} 项</li>
-                    <li>未解决风险：{data.summary.currentRiskCount} 项（高风险 {data.summary.highRiskCount}，关注 {data.summary.watchRiskCount}）</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">二、重点品类</h4>
-                  {data.focusCategories.length === 0 ? (
-                    <p className="text-gray-400 ml-4">暂无重点品类</p>
-                  ) : (
-                    <ol className="space-y-1 text-gray-600 ml-4 list-decimal">
-                      {data.focusCategories.map((item) => (
-                        <li key={item.categoryId}>{item.categoryName}：共 {item.totalCount} 项（开发 {item.developmentCount}，采购 {item.purchaseCount}，风险 {item.riskCount}）</li>
-                      ))}
-                    </ol>
-                  )}
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">三、本期进展</h4>
-                  {allProgress.length === 0 ? (
-                    <p className="text-gray-400 ml-4">本期暂无进展</p>
-                  ) : (
-                    <ul className="space-y-1 text-gray-600 ml-4">
-                      {allProgress.slice(0, 10).map((item) => (
-                        <li key={`${item.source}-${item.id}`}>
-                          [{item.sourceLabel}] {item.title} — {item.categoryName}，负责人：{item.ownerName}，状态：{item.status}
-                          {item.dueDate ? `，截止：${formatDate(item.dueDate)}` : ''}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">四、待决策事项</h4>
-                  {data.bossDecisions.length === 0 ? (
-                    <p className="text-gray-400 ml-4">暂无待决策事项</p>
-                  ) : (
-                    <ul className="space-y-1 text-gray-600 ml-4">
-                      {data.bossDecisions.slice(0, 10).map((item) => (
-                        <li key={`${item.source}-${item.id}`}>
-                          [{item.sourceLabel}] {item.title} — {item.categoryName}，负责人：{item.ownerName}，状态：{item.status}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">五、风险与异常</h4>
-                  {highRisks.length === 0 && watchRisks.length === 0 ? (
-                    <p className="text-gray-400 ml-4">当前无风险项</p>
-                  ) : (
-                    <div className="ml-4 space-y-2">
-                      {highRisks.length > 0 && (
-                        <div>
-                          <span className="text-red-600 font-medium">高风险：</span>
-                          <ul className="mt-1 space-y-1 text-gray-600">
-                            {highRisks.map((item: BossReportRiskItem) => (
-                              <li key={`${item.source}-${item.id}`}>• {item.title}（{item.riskReasons.join('、')}）</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {watchRisks.length > 0 && (
-                        <div>
-                          <span className="text-amber-600 font-medium">关注项：</span>
-                          <ul className="mt-1 space-y-1 text-gray-600">
-                            {watchRisks.map((item: BossReportRiskItem) => (
-                              <li key={`${item.source}-${item.id}`}>• {item.title}（{item.riskReasons.join('、')}）</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <pre className="px-6 py-5 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap font-sans">{data.markdown}</pre>
             </div>
           </Section>
 

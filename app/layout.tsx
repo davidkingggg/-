@@ -4,8 +4,8 @@ import AppLayout from "@/components/layout/AppLayout";
 import { ClientProviders } from "@/components/layout/ClientProviders";
 
 export const metadata: Metadata = {
-  title: "个人工作库 - 集成采购平台",
-  description: "锅炉行业集成采购平台个人本地数据库",
+  title: "供采管家",
+  description: "本地优先的供应商与采购管理平台",
 };
 
 export default function RootLayout({
