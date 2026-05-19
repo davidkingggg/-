@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import QuoteCompareTable from '@/components/quote-compare/QuoteCompareTable'
 
 export default function QuoteComparePage() {

@@ -1,3 +1,15 @@
+﻿import React from 'react'
+import {
+  Factory,
+  Award,
+  Layers,
+  FileSpreadsheet,
+  ShieldAlert,
+  Zap,
+  Clock,
+  Edit3
+} from 'lucide-react'
+
 interface DashboardCardProps {
   label: string
   value: number | string
@@ -9,57 +21,123 @@ interface DashboardCardProps {
 
 const toneStyles = {
   blue: {
-    iconBg: 'bg-blue-50',
-    iconText: 'text-blue-500',
-    accent: 'bg-blue-500',
+    iconBg: 'bg-blue-50/60 ring-1 ring-blue-500/10',
+    iconText: 'text-blue-600',
+    glowColor: 'rgba(59, 130, 246, 0.06)',
+    glowHover: 'rgba(59, 130, 246, 0.12)',
   },
   emerald: {
-    iconBg: 'bg-emerald-50',
-    iconText: 'text-emerald-500',
-    accent: 'bg-emerald-500',
+    iconBg: 'bg-emerald-50/60 ring-1 ring-emerald-500/10',
+    iconText: 'text-emerald-600',
+    glowColor: 'rgba(16, 185, 129, 0.06)',
+    glowHover: 'rgba(16, 185, 129, 0.12)',
   },
   amber: {
-    iconBg: 'bg-amber-50',
-    iconText: 'text-amber-500',
-    accent: 'bg-amber-500',
+    iconBg: 'bg-amber-50/60 ring-1 ring-amber-500/10',
+    iconText: 'text-amber-600',
+    glowColor: 'rgba(245, 158, 11, 0.06)',
+    glowHover: 'rgba(245, 158, 11, 0.12)',
   },
   red: {
-    iconBg: 'bg-red-50',
-    iconText: 'text-red-500',
-    accent: 'bg-red-500',
+    iconBg: 'bg-rose-50/60 ring-1 ring-rose-500/10',
+    iconText: 'text-rose-600',
+    glowColor: 'rgba(244, 63, 94, 0.06)',
+    glowHover: 'rgba(244, 63, 94, 0.12)',
   },
   slate: {
-    iconBg: 'bg-slate-100',
-    iconText: 'text-slate-500',
-    accent: 'bg-slate-400',
+    iconBg: 'bg-slate-100/80 ring-1 ring-slate-500/10',
+    iconText: 'text-slate-600',
+    glowColor: 'rgba(100, 116, 139, 0.06)',
+    glowHover: 'rgba(100, 116, 139, 0.12)',
   },
   violet: {
-    iconBg: 'bg-violet-50',
-    iconText: 'text-violet-500',
-    accent: 'bg-violet-500',
+    iconBg: 'bg-violet-50/60 ring-1 ring-violet-500/10',
+    iconText: 'text-violet-600',
+    glowColor: 'rgba(139, 92, 246, 0.06)',
+    glowHover: 'rgba(139, 92, 246, 0.12)',
   },
   orange: {
-    iconBg: 'bg-orange-50',
-    iconText: 'text-orange-500',
-    accent: 'bg-orange-500',
+    iconBg: 'bg-orange-50/60 ring-1 ring-orange-500/10',
+    iconText: 'text-orange-600',
+    glowColor: 'rgba(249, 115, 22, 0.06)',
+    glowHover: 'rgba(249, 115, 22, 0.12)',
   },
+}
+
+// 鑷姩杞崲鑰佹棫 HTML 瀹炰綋鍥炬爣涓虹簿缇庣殑绾挎鐭㈤噺鍥炬爣
+function renderSemanticIcon(iconStr?: string, toneClass?: string) {
+  if (!iconStr) return null;
+
+  const cl = `w-4 h-4 ${toneClass}`;
+
+  if (iconStr.includes('9670') || iconStr === '鈼?) {
+    return <Factory className={cl} />
+  }
+  if (iconStr.includes('9733') || iconStr === '鈽?) {
+    return <Award className={cl} />
+  }
+  if (iconStr.includes('9830') || iconStr === '鈾?) {
+    return <Layers className={cl} />
+  }
+  if (iconStr.includes('9998') || iconStr === '鉁?) {
+    return <FileSpreadsheet className={cl} />
+  }
+  if (iconStr.includes('9888') || iconStr === '鈿?) {
+    return <ShieldAlert className={cl} />
+  }
+  if (iconStr.includes('9889') || iconStr === '鈿?) {
+    return <Zap className={cl} />
+  }
+  if (iconStr.includes('9200') || iconStr === '鈴?) {
+    return <Clock className={cl} />
+  }
+  if (iconStr.includes('9997') || iconStr === '鉁?) {
+    return <Edit3 className={cl} />
+  }
+
+  // Fallback as normal text (emoji)
+  return <span className="text-sm">{iconStr}</span>;
 }
 
 export default function DashboardCard({ label, value, description, tone = 'slate', icon, compact }: DashboardCardProps) {
   const s = toneStyles[tone]
+
   return (
-    <div className={`relative overflow-hidden rounded-[18px] bg-white border border-[#e5eaf3] transition-shadow hover:shadow-md ${compact ? 'min-h-[88px] p-4' : 'min-h-[112px] p-5'}`}
-      style={{ boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)' }}>
-      <div className={`absolute left-0 top-0 bottom-0 w-1 ${s.accent} rounded-l-[18px]`} />
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 pl-2">
-          <div className="text-[13px] font-medium text-[#64748b]">{label}</div>
-          <div className={`mt-2.5 font-extrabold leading-none tracking-tight text-[#0f172a] ${compact ? 'text-[26px]' : 'text-[32px]'}`}>{value}</div>
-          {description ? <div className="mt-2 text-[11px] leading-snug text-slate-400">{description}</div> : null}
+    <div
+      className={`group relative overflow-hidden rounded-[20px] bg-white border border-slate-200/50 premium-transition hover:-translate-y-0.5 shadow-sm active-shrink-sm ${
+        compact ? 'min-h-[88px] p-4' : 'min-h-[112px] p-5'
+      }`}
+      style={{
+        boxShadow: '0 8px 30px rgba(15, 23, 42, 0.02)'
+      }}
+    >
+      {/* Corner Ambient Glow Backlight */}
+      <div
+        className="absolute -right-8 -bottom-8 w-24 h-24 rounded-full blur-2xl premium-transition opacity-70 group-hover:opacity-100"
+        style={{
+          background: s.glowColor,
+          backgroundImage: `radial-gradient(circle, ${s.glowColor} 0%, transparent 70%)`
+        }}
+      />
+
+      <div className="relative flex items-start justify-between gap-3 h-full">
+        <div className="min-w-0 pl-1">
+          <div className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">{label}</div>
+          <div className={`mt-2 font-display font-extrabold leading-none tracking-tight text-slate-800 ${
+            compact ? 'text-2xl' : 'text-3xl'
+          }`}>
+            {value}
+          </div>
+          {description ? (
+            <div className="mt-2 text-[10px] leading-snug text-slate-400/90 font-medium">
+              {description}
+            </div>
+          ) : null}
         </div>
+
         {icon && (
-          <div className={`shrink-0 w-10 h-10 rounded-xl ${s.iconBg} flex items-center justify-center`}>
-            <span className={`text-lg ${s.iconText}`}>{icon}</span>
+          <div className={`shrink-0 w-8 h-8 rounded-lg ${s.iconBg} flex items-center justify-center premium-transition group-hover:scale-105`}>
+            {renderSemanticIcon(icon, s.iconText)}
           </div>
         )}
       </div>

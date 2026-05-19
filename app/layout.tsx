@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import AppLayout from "@/components/layout/AppLayout";
 import { ClientProviders } from "@/components/layout/ClientProviders";
+import { LayoutGate } from "@/components/layout/LayoutGate";
 
 export const metadata: Metadata = {
   title: "供采管家",
@@ -17,9 +17,9 @@ export default function RootLayout({
     <html lang="zh-CN">
       <body className="bg-gray-50 text-gray-900">
         <ClientProviders>
-          <AppLayout>
+          <LayoutGate>
             {children}
-          </AppLayout>
+          </LayoutGate>
         </ClientProviders>
       </body>
     </html>

@@ -1,26 +1,108 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #f6f8fb;
+  --background: #f3f5f9;
+
   --foreground: #0f172a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-sans: "Inter", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-display: "Outfit", "Inter", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+
+  --shadow-premium: 0 12px 40px rgba(15, 23, 42, 0.025), 0 2px 8px rgba(15, 23, 42, 0.015);
+  --shadow-premium-hover: 0 20px 48px rgba(15, 23, 42, 0.05), 0 4px 12px rgba(15, 23, 42, 0.02);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #0b0f19;
     --foreground: #ededed;
   }
 }
 
 body {
-  background: var(--background);
+  background: linear-gradient(180deg, var(--background) 0%, #f8fafc 100%);
   color: var(--foreground);
   font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+/* Premium micro-transition and active animations */
+.premium-transition {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.active-shrink {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.active-shrink:active {
+  transform: scale(0.98);
+}
+
+.active-shrink-sm {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.active-shrink-sm:active {
+  transform: scale(0.96);
+}
+
+/* Glow animations for UI indicators */
+@keyframes pulse-glow-red {
+  0%, 100% {
+    box-shadow: 0 0 0 0px rgba(239, 68, 68, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.15);
+  }
+}
+
+@keyframes pulse-glow-emerald {
+  0%, 100% {
+    box-shadow: 0 0 0 0px rgba(16, 185, 129, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.15);
+  }
+}
+
+.animate-pulse-glow-red {
+  animation: pulse-glow-red 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.animate-pulse-glow-emerald {
+  animation: pulse-glow-emerald 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+/* Shimmer Scanning effect */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.shimmer-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-sweep::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.2) 20%,
+    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 2s infinite;
+  content: '';
 }

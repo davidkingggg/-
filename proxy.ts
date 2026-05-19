@@ -5,23 +5,21 @@ import { getSessionOptions, type SessionData } from '@/lib/session'
 const publicPaths = ['/login']
 const publicApiPaths = ['/api/auth/login', '/api/auth/init']
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Allow public paths
-  if (publicPaths.some((p) => pathname.startsWith(p))) {
-    return NextResponse.next()
-  }
-  if (publicApiPaths.some((p) => pathname.startsWith(p))) {
+  if (publicPaths.some((path) => pathname.startsWith(path))) {
     return NextResponse.next()
   }
 
-  // Allow static assets
+  if (publicApiPaths.some((path) => pathname.startsWith(path))) {
+    return NextResponse.next()
+  }
+
   if (pathname.startsWith('/_next') || pathname.startsWith('/favicon')) {
     return NextResponse.next()
   }
 
-  // Check session
   const response = NextResponse.next()
   const session = await getIronSession<SessionData>(request, response, getSessionOptions())
 

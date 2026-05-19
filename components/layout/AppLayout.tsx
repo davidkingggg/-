@@ -1,9 +1,9 @@
-import Sidebar from './Sidebar';
+﻿import Sidebar from './Sidebar';
 import Header from './Header';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#f6f8fb] flex">
+    <div className="min-h-screen bg-gradient-to-b from-[#f3f5f9] to-[#f8fafc] flex">
       {/* Sidebar - fixed */}
       <Sidebar />
 
