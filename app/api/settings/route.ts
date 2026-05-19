@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { getCurrentUser, requireAdmin } from '@/lib/auth-utils'
 
 export async function GET() {
   try {
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: '未登录' }, { status: 401 })
+
     const settings = await prisma.systemSetting.findMany({
       orderBy: { key: 'asc' },
     })
@@ -14,6 +18,8 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
+    await requireAdmin()
+
     const body = await request.json()
     const items = body.items as Array<{ id: string; value: string; notes?: string }>
 
@@ -29,7 +35,6 @@ export async function PUT(request: Request) {
       if (!existing) {
         return NextResponse.json({ error: `设置项不存在（ID: ${item.id}）` }, { status: 404 })
       }
-      // 只允许更新 value 和 notes，不允许修改 key
       await prisma.systemSetting.update({
         where: { id: item.id },
         data: {
@@ -41,7 +46,10 @@ export async function PUT(request: Request) {
 
     const updated = await prisma.systemSetting.findMany({ orderBy: { key: 'asc' } })
     return NextResponse.json(updated)
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === '需要管理员权限') {
+      return NextResponse.json({ error: error.message }, { status: 403 })
+    }
     return NextResponse.json({ error: '更新系统设置失败' }, { status: 500 })
   }
 }

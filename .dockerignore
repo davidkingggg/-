@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.env
+.env.*
+data
+*.db
+*.db-journal
+.codex-dev-*
+.vscode
+.claude
+test_quote.csv
