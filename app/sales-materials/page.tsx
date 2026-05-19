@@ -240,9 +240,9 @@ export default function SalesMaterialsPage() {
         <button
           type="button"
           onClick={openCreate}
-          className="w-fit h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm"
+          className="inline-flex items-center justify-center h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm"
         >
-          新增资料
+          + 新增资料
         </button>
       </div>
 
