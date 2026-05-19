@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useWorkflowLookups } from './useWorkflowLookups';
 import { DEVELOPMENT_STAGES, PRIORITIES, DEVELOPMENT_STATUSES } from '@/lib/workflow-constants';
 import { useToast } from '@/components/ui/Toast';

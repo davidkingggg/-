@@ -350,7 +350,7 @@ export function buildCategoryPackageMarkdown(data: CategoryPackageData): string 
     if (group.length === 0) continue
     lines.push(`### ${level}`)
     lines.push('')
-    lines.push('| 供应商 | 地区 | 公司性质 | 合作意愿 | 价格水平 | 已报价 | 已考察 |')
+    lines.push('| 供应商 | 所在地区 | 公司性质 | 合作意愿 | 价格水平 | 已报价 | 已考察 |')
     lines.push('|--------|------|----------|----------|----------|--------|--------|')
     for (const s of group) {
       lines.push(`| ${s.name} | ${s.region || '-'} | ${s.companyType || '-'} | ${s.cooperationWillingness || '-'} | ${s.priceLevel || '-'} | ${s.hasQuoted ? '是' : '否'} | ${s.hasVisited ? '是' : '否'} |`)
@@ -460,7 +460,7 @@ export function buildCategoryPackageCSV(data: CategoryPackageData): string {
     '品类名称',
     '供应商名称',
     '推荐等级',
-    '地区',
+    '所在地区',
     '公司性质',
     '合作意愿',
     '价格水平',

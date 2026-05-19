@@ -26,10 +26,10 @@ export const SQLITE_JOURNAL_WARNING =
 
 const PRISMA_SCHEMA_PATH = path.join(/* turbopackIgnore: true */ process.cwd(), 'prisma', 'schema.prisma')
 const BACKUP_DIR = path.join(/* turbopackIgnore: true */ process.cwd(), 'backups')
-const NORMAL_PREFIX = 'boiler-procurement-db-'
+const NORMAL_PREFIX = 'personal-workship-v0-9-2-'
 const BEFORE_RESTORE_PREFIX = 'before-restore-'
 const BACKUP_NAME_PATTERN =
-  /^(boiler-procurement-db|before-restore)-\d{8}-\d{6}-\d{3}(?:-\d+)?\.sqlite$/
+  /^(personal-workship-v0-9-2|before-restore)-\d{8}-\d{6}-\d{3}(?:-\d+)?\.sqlite$/
 
 function assertError(message: string): never {
   throw new Error(message)

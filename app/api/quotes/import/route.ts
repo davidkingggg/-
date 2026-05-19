@@ -37,8 +37,11 @@ const HEADER_MAP: Record<string, string> = {
   '付款条件': 'paymentTerms',
   '质保期': 'warranty',
   '价格备注': 'priceNotes',
+  '备注': 'priceNotes',
 }
 
+const AUTO_CREATED_SUPPLIER_SOURCE = '报价CSV导入'
+const AUTO_CREATED_CATEGORY_NOTE = '报价CSV导入自动创建'
 const VALID_SOURCE_TYPES = new Set(['微信', '图片', 'PDF', 'Excel', '口头', '其他'])
 const VALID_QUOTE_STAGES = new Set(['初次报价', '二次议价', '最终确认价', '量大优惠价'])
 
@@ -68,10 +71,9 @@ interface ParsedRow {
 }
 
 const REQUIRED_FIELDS = [
-  { field: 'supplierName', label: '供应商名称', suggestion: '请填写系统中已存在的供应商名称。' },
-  { field: 'categoryName', label: '品类', suggestion: '请填写系统中已存在的品类名称。' },
+  { field: 'supplierName', label: '供应商名称', suggestion: '请填写供应商名称；系统中不存在时会自动新建。' },
+  { field: 'categoryName', label: '品类', suggestion: '请填写品类名称；系统中不存在时会自动新建。' },
   { field: 'quoteDate', label: '报价日期', suggestion: '请使用 YYYY-MM-DD 格式，例如 2026-05-01。' },
-  { field: 'compareKey', label: '对比规格标识 (compareKey)', suggestion: '请填写用于同类产品横向对比的规格标识，例如 DN50 截止阀。' },
   { field: 'productName', label: '产品名称', suggestion: '请填写产品名称。' },
   { field: 'price', label: '报价', suggestion: '请填写数字格式的报价金额。' },
 ]
@@ -239,13 +241,14 @@ export async function POST(request: Request) {
 
       // 必填校验
       if (!data.supplierName?.trim()) {
-        errors.push(rowError(rowNum, '供应商名称', data.supplierName, '供应商名称不能为空', '请填写系统中已存在的供应商名称。'))
+        errors.push(rowError(rowNum, '供应商名称', data.supplierName, '供应商名称不能为空', '请填写供应商名称；系统中不存在时会自动新建。'))
       }
       if (!data.categoryName?.trim()) {
-        errors.push(rowError(rowNum, '品类', data.categoryName, '品类不能为空', '请填写系统中已存在的品类名称。'))
+        errors.push(rowError(rowNum, '品类', data.categoryName, '品类不能为空', '请填写品类名称；系统中不存在时会自动新建。'))
       }
+      // compareKey 可选，如未提供则使用品类+产品名称作为默认值
       if (!data.compareKey?.trim()) {
-        errors.push(rowError(rowNum, '对比规格标识 (compareKey)', data.compareKey, '对比规格标识不能为空', '请填写用于报价对比的规格标识，例如 DN50 截止阀。'))
+        data.compareKey = `${data.categoryName} ${data.productName}`
       }
       if (!data.productName?.trim()) {
         errors.push(rowError(rowNum, '产品名称', data.productName, '产品名称不能为空', '请填写产品名称。'))
@@ -340,7 +343,7 @@ export async function POST(request: Request) {
       return validationFailure('导入校验失败，请修正后重试。本次导入未写入任何数据。', errors, rows.length)
     }
 
-    // ─── 阶段 2：数据库校验（供应商、品类是否存在） ──────────
+    // ─── 阶段 2：数据库校验（供应商和品类不存在则稍后在事务内自动创建） ──────────
     const supplierNames = [...new Set(parsedRows.map(r => r.supplierName))]
     const categoryNames = [...new Set(parsedRows.map(r => r.categoryName))]
 
@@ -426,23 +429,46 @@ export async function POST(request: Request) {
       }
     }
 
-    // 检查不存在的供应商和品类
-    for (let ri = 0; ri < parsedRows.length; ri++) {
-      const row = parsedRows[ri]
-      if (!supplierMap.has(row.supplierName)) {
-        errors.push(rowError(row.rowNumber, '供应商名称', row.supplierName, `供应商「${row.supplierName}」不存在`, '请先在供应商库新增该供应商，或修改为已有供应商名称。'))
-      }
-      if (!categoryMap.has(row.categoryName)) {
-        errors.push(rowError(row.rowNumber, '品类', row.categoryName, `品类「${row.categoryName}」不存在`, '请先在品类中心新增该品类，或修改为已有品类名称。'))
-      }
-    }
-
     if (errors.length > 0) {
-      return validationFailure('导入校验失败：存在不匹配的供应商或品类。本次导入未写入任何数据。', errors, rows.length)
+      return validationFailure('导入校验失败，请修正后重试。本次导入未写入任何数据。', errors, rows.length)
     }
 
     // ─── 阶段 3：在事务中写入数据 ──────────────────────────
     const result = await prisma.$transaction(async (tx) => {
+      const autoCreatedSupplierNames = new Set<string>()
+      const autoCreatedCategoryNames = new Set<string>()
+
+      for (const categoryName of categoryNames) {
+        if (categoryMap.has(categoryName)) continue
+
+        const category = await tx.category.create({
+          data: {
+            name: categoryName,
+            notes: AUTO_CREATED_CATEGORY_NOTE,
+          },
+          select: { id: true, name: true },
+        })
+        categoryMap.set(category.name, category.id)
+        autoCreatedCategoryNames.add(category.name)
+      }
+
+      for (const row of parsedRows) {
+        if (supplierMap.has(row.supplierName)) continue
+
+        const categoryId = categoryMap.get(row.categoryName)!
+        const supplier = await tx.supplier.create({
+          data: {
+            name: row.supplierName,
+            categoryId,
+            hasQuoted: true,
+            source: AUTO_CREATED_SUPPLIER_SOURCE,
+          },
+          select: { id: true, name: true },
+        })
+        supplierMap.set(supplier.name, supplier.id)
+        autoCreatedSupplierNames.add(supplier.name)
+      }
+
       // 按报价单分组
       const sheetGroups = new Map<string, ParsedRow[]>()
       for (const row of parsedRows) {
@@ -546,17 +572,26 @@ export async function POST(request: Request) {
         }
       }
 
-      return { sheetsCreated, itemsCreated, attachmentsCreated }
+      return {
+        sheetsCreated,
+        itemsCreated,
+        attachmentsCreated,
+        suppliersCreated: autoCreatedSupplierNames.size,
+        categoriesCreated: autoCreatedCategoryNames.size,
+      }
     })
 
     return NextResponse.json({
       success: true,
-      message: `导入成功：${result.sheetsCreated} 张报价单，${result.itemsCreated} 条明细，${result.attachmentsCreated} 条附件`,
+      message: `导入成功：${result.sheetsCreated} 张报价单，${result.itemsCreated} 条明细，${result.attachmentsCreated} 条附件，自动新增 ${result.suppliersCreated} 家供应商、${result.categoriesCreated} 个品类`,
       ...result,
       totalRows: rows.length,
     })
   } catch (e) {
     console.error('CSV import error:', e)
-    return NextResponse.json({ error: '导入失败：' + (e instanceof Error ? e.message : '未知错误') }, { status: 500 })
+    const message = '导入失败：' + (e instanceof Error ? e.message : '未知错误')
+    return validationFailure(message, [
+      rowError(1, '文件', '', message, '请稍后重试，或检查 CSV 文件内容是否符合模板。'),
+    ], 0, 500)
   }
 }

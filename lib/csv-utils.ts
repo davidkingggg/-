@@ -62,12 +62,16 @@ export function parseDate(value: string | undefined | null): { ok: true; value: 
     return { ok: true, value: null }
   }
   const v = value.trim()
-  // 支持 YYYY-MM-DD 和 YYYY/MM/DD
-  const match = v.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/)
-  if (!match) {
+  // 支持 YYYY-MM-DD、YYYY/MM/DD 和常见 Excel/美式 M/D/YYYY
+  const ymdMatch = v.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/)
+  const mdyMatch = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  const year = ymdMatch?.[1] ?? mdyMatch?.[3]
+  const month = ymdMatch?.[2] ?? mdyMatch?.[1]
+  const day = ymdMatch?.[3] ?? mdyMatch?.[2]
+  if (!year || !month || !day) {
     return { ok: false, error: `日期格式错误「${value}」，请使用 YYYY-MM-DD 格式` }
   }
-  const date = new Date(`${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}T00:00:00.000Z`)
+  const date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00.000Z`)
   if (isNaN(date.getTime())) {
     return { ok: false, error: `日期「${value}」无效` }
   }
@@ -155,15 +159,116 @@ export function parseCSVLine(line: string): string[] {
 }
 
 export function parseCSV(text: string): { headers: string[]; rows: string[][] } {
-  const lines = normalizeCSVText(text).split(/\r?\n/).filter(l => l.trim() !== '')
-  if (lines.length === 0) return { headers: [], rows: [] }
-  const headers = parseCSVLine(lines[0])
-  const rows = lines.slice(1).map(line => parseCSVLine(line))
+  const normalizedText = detectAndFixEncoding(text)
+  const records = parseCSVRecords(normalizeCSVText(normalizedText)).filter((row) =>
+    row.some((cell) => cell.trim() !== '')
+  )
+  if (records.length === 0) return { headers: [], rows: [] }
+  const headers = records[0]
+  const rows = records.slice(1)
   return { headers, rows }
 }
 
 export function normalizeCSVText(text: string) {
   return text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+}
+
+function parseCSVRecords(text: string): string[][] {
+  const records: string[][] = []
+  let row: string[] = []
+  let current = ''
+  let inQuotes = false
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (text[i + 1] === '"') {
+          current += '"'
+          i++
+        } else {
+          inQuotes = false
+        }
+      } else {
+        current += char
+      }
+      continue
+    }
+
+    if (char === '"') {
+      inQuotes = true
+    } else if (char === ',') {
+      row.push(current.trim())
+      current = ''
+    } else if (char === '\n') {
+      row.push(current.trim())
+      records.push(row)
+      row = []
+      current = ''
+    } else {
+      current += char
+    }
+  }
+
+  if (current !== '' || row.length > 0) {
+    row.push(current.trim())
+    records.push(row)
+  }
+
+  return records
+}
+
+/**
+ * \u68C0\u6D4B\u5E76\u4FEE\u590D GBK/GB2312 \u7F16\u7801\u5BFC\u81F4\u7684\u4E71\u7801\u95EE\u9898
+ * \u5F53\u6587\u672C\u4E2D\u5305\u542B\u5927\u91CF\u65E0\u6CD5\u8BC6\u522B\u7684 Unicode \u5B57\u7B26\u65F6\uFF0C\u53EF\u80FD\u662F GBK \u7F16\u7801\u88AB\u9519\u8BEF\u89E3\u7801
+ */
+function detectAndFixEncoding(text: string): string {
+  // \u5982\u679C\u6587\u672C\u5DF2\u7ECF\u5305\u542B\u6B63\u5E38\u4E2D\u6587\u5B57\u7B26\uFF0C\u65E0\u9700\u5904\u7406
+  const chineseChars = (text.match(/[\u4E00-\u9FA5]/g) ?? [])
+  if (chineseChars.length > 10) {
+    return text
+  }
+
+  // \u5982\u679C\u6587\u672C\u5305\u542B\u66FF\u6362\u5B57\u7B26(U+FFFD)\uFF0C\u8BF4\u660E\u662F\u7F16\u7801\u95EE\u9898
+  const hasReplacementChars = text.includes('\uFFFD')
+
+  // \u68C0\u6D4B GBK \u5B57\u8282\u6A21\u5F0F\uFF08\u5F53 GBK \u88AB\u9519\u8BEF\u5730\u4EE5 Latin-1 \u89E3\u7801\u65F6\u7684\u7279\u5F81\uFF09
+  const hasHighBytes = /[\u00C0-\u00FF]{3,}/.test(text)
+  const hasGBKBytePattern = text.length > 0 && /[\u0081-\u00FE][@-\u00FE]/.test(text)
+
+  if (!hasReplacementChars && !hasHighBytes && !hasGBKBytePattern) {
+    return text
+  }
+
+  // \u5C1D\u8BD5\u4F7F\u7528 TextDecoder \u8FDB\u884C GBK \u89E3\u7801
+  if (typeof TextDecoder !== 'undefined') {
+    try {
+      const decoder = new TextDecoder('gbk')
+      const bytes = text.includes('\uFFFD')
+        ? recoverBytesFromMojibake(text)
+        : new TextEncoder().encode(text)
+      const decoded = decoder.decode(bytes)
+      const decodedChinese = (decoded.match(/[\u4E00-\u9FA5]/g) ?? [])
+      if (decodedChinese.length > chineseChars.length) {
+        return decoded
+      }
+    } catch {
+      // \u89E3\u7801\u5931\u8D25\uFF0C\u8FD4\u56DE\u539F\u6587
+    }
+  }
+
+  return text
+}
+
+function recoverBytesFromMojibake(text: string): Uint8Array {
+  const bytes: number[] = []
+  for (const char of text) {
+    const code = char.charCodeAt(0)
+    if (code === 0xfffd) continue
+    if (code <= 0xff) bytes.push(code)
+  }
+  return new Uint8Array(bytes)
 }
 
 // ─── 行错误类型 ────────────────────────────────────────────

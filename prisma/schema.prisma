@@ -255,6 +255,7 @@ model PurchaseExecutionProcess {
   hasPrepaymentOffset Boolean   @default(false)
   status              String
   remark              String?
+  companyName         String?
   isArchived          Boolean   @default(false)
   archivedAt          DateTime?
   createdAt           DateTime  @default(now())

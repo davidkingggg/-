@@ -40,15 +40,23 @@ export async function PUT(
     }
 
     const { 
-      type, categoryId, date, location, participants,
+      type, supplierId, categoryId, date, location, participants,
       keyPoints, productHighlights, priceInfo, qualificationInfo,
       deliveryInfo, afterSalesInfo, risks, nextActions, recommendFollowUp, notes
     } = body;
+
+    if (supplierId !== undefined && !supplierId) {
+      return NextResponse.json({ error: "请选择供应商" }, { status: 400 });
+    }
+    if (categoryId !== undefined && !categoryId) {
+      return NextResponse.json({ error: "请选择品类" }, { status: 400 });
+    }
 
     const record = await db.investigationRecord.update({
       where: { id },
       data: {
         type: type !== undefined ? type : existing.type,
+        supplierId: supplierId !== undefined ? supplierId : existing.supplierId,
         categoryId: categoryId !== undefined ? categoryId : existing.categoryId,
         date: date ? new Date(date) : existing.date,
         location: location !== undefined ? location : existing.location,
@@ -63,7 +71,11 @@ export async function PUT(
         nextActions: nextActions !== undefined ? nextActions : existing.nextActions,
         recommendFollowUp: recommendFollowUp !== undefined ? Boolean(recommendFollowUp) : existing.recommendFollowUp,
         notes: notes !== undefined ? notes : existing.notes
-      }
+      },
+      include: {
+        supplier: { select: { name: true } },
+        category: { select: { name: true } },
+      },
     });
 
     return NextResponse.json(record);

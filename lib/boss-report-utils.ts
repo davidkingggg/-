@@ -305,7 +305,7 @@ export function buildBossReportMarkdown(data: Omit<BossReportData, 'markdown'>) 
   const watchRisks = data.currentRisks.filter((item) => item.riskLevel === 'watch')
 
   return [
-    `# 老板汇报（${data.range.label}）`,
+    `# 采购经营简报（${data.range.label}）`,
     '',
     '## 一、核心概览',
     `- 开发进展：${data.summary.developmentProgressCount} 项`,
@@ -326,7 +326,7 @@ export function buildBossReportMarkdown(data: Omit<BossReportData, 'markdown'>) 
     '## 三、本期开发/采购进展',
     formatMarkdownList([...data.developmentProgress, ...data.purchaseProgress], '本期暂无开发/采购进展'),
     '',
-    '## 四、待老板决策事项',
+    '## 四、待决策事项',
     formatMarkdownList(data.bossDecisions, '当前暂无待老板决策事项'),
     '',
     '## 五、当前未解决风险/异常/暂停',

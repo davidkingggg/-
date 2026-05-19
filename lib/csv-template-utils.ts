@@ -1,6 +1,6 @@
 import type { CSVValue } from '@/lib/csv-utils'
 
-export type CSVTemplateType = 'quote-items' | 'suppliers'
+export type CSVTemplateType = 'quote-items' | 'suppliers' | 'purchase-processes'
 
 export interface CSVTemplate {
   type: CSVTemplateType
@@ -67,9 +67,9 @@ const quoteItemsTemplate: CSVTemplate = {
       '示例行，导入前请替换为真实报价',
     ],
   ],
-  requiredFields: ['供应商名称', '品类', '报价日期', '对比规格标识 (compareKey)', '产品名称', '报价'],
+  requiredFields: ['供应商名称', '品类', '报价日期', '产品名称', '报价'],
   notes: [
-    '供应商名称和品类必须已在系统中存在。',
+    '供应商名称或品类不存在时会自动新增。',
     '税率支持 13%、13、0.13 三种写法。',
     '是否含税、是否含运费只接受 是/否/true/false/yes/no/1/0。',
     '相同报价单编号会合并为同一张报价单；未填写编号时按供应商、品类、报价日期、报价阶段合并。',
@@ -84,7 +84,7 @@ const suppliersTemplate: CSVTemplate = {
   description: '用于批量导入供应商及其联系人。',
   headers: [
     '供应商名称',
-    '主品类',
+    '品类',
     '所在地区',
     '公司性质',
     '来源',
@@ -132,9 +132,9 @@ const suppliersTemplate: CSVTemplate = {
       '2026-05-20',
     ],
   ],
-  requiredFields: ['供应商名称', '主品类'],
+  requiredFields: ['供应商名称', '品类'],
   notes: [
-    '主品类必须是系统中已有且未归档的品类。',
+    '品类必须是系统中已有且未归档的品类。',
     '供应商名称不能与已有未归档供应商重复，CSV 内部也不能重复。',
     '每行最多创建 1 个供应商和 0/1 个联系人。',
     '联系人姓名非空时才创建联系人记录。',
@@ -142,9 +142,45 @@ const suppliersTemplate: CSVTemplate = {
   supportedImport: true,
 }
 
+const purchaseProcessesTemplate: CSVTemplate = {
+  type: 'purchase-processes',
+  title: '采购审批导入模板',
+  fileName: 'purchase_processes_template.csv',
+  description: '用于批量导入采购审批事项。',
+  headers: [
+    '所属公司',
+    '实际金额',
+    '所属项目',
+    '详细说明',
+    '支付对象',
+    '最后审批时间',
+  ],
+  sampleRows: [
+    [
+      '杭州某某科技有限公司',
+      '750',
+      '前期业务拓展',
+      '拜访客户交通费用，1台出租车总计 750元',
+      '杭州中机城市规划设计研究院',
+      '2026-05-11',
+    ],
+  ],
+  requiredFields: ['所属项目', '支付对象'],
+  notes: [
+    '所有列的编码必须为 UTF-8（建议从 Excel 导出时选择 UTF-8 格式）。',
+    '日期格式统一使用 YYYY-MM-DD，例如 2026-05-11。',
+    '金额为非负数字，不含货币符号。',
+    '所属公司、实际金额、详细说明、最后审批时间可留空。',
+    '如导入弹窗中未提供品类、需求提交人，将在校验通过后使用或创建默认值。',
+    '支付对象如果不存在于系统中，将自动创建新供应商。',
+  ],
+  supportedImport: true,
+}
+
 const templates: Record<CSVTemplateType, CSVTemplate> = {
   'quote-items': quoteItemsTemplate,
   suppliers: suppliersTemplate,
+  'purchase-processes': purchaseProcessesTemplate,
 }
 
 export function listCSVTemplates() {

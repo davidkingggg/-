@@ -187,12 +187,12 @@ export default function InvestigationsPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">调研/考察记录</h1>
-          <p className="text-sm text-gray-500 mt-1">记录与供应商沟通、看厂及产品调研详情</p>
+          <h1 className="text-[22px] font-bold text-[#0f172a]">调研/考察记录</h1>
+          <p className="text-[13px] text-slate-400 mt-0.5">记录与供应商沟通、看厂及产品调研详情</p>
         </div>
         <button
           onClick={() => handleOpenForm()}
-          className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm inline-block"
+          className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm inline-block"
         >
           + 新增记录
         </button>
@@ -202,7 +202,7 @@ export default function InvestigationsPage() {
         <select
           value={filterSupplier}
           onChange={(e) => setFilterSupplier(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部供应商</option>
           {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -210,7 +210,7 @@ export default function InvestigationsPage() {
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部品类</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -218,14 +218,14 @@ export default function InvestigationsPage() {
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部记录类型</option>
           {TYPE_OPTIONS.map(l => <option key={l} value={l}>{l}</option>)}
         </select>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="rounded-[20px] bg-white border border-[#e5eaf3] overflow-hidden" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
         {loading ? (
           <div className="text-center text-gray-400 py-16">加载中...</div>
         ) : records.length === 0 ? (
@@ -234,32 +234,32 @@ export default function InvestigationsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left px-6 py-3.5 font-semibold text-gray-600">日期</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-gray-600">供应商</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-gray-600">品类</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-gray-600">方式</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-gray-600 w-1/4">沟通重点</th>
-                  <th className="text-center px-4 py-3.5 font-semibold text-gray-600">推荐跟进</th>
-                  <th className="text-right px-6 py-3.5 font-semibold text-gray-600">操作</th>
+                <tr className="bg-[#f8fafc] border-b border-[#e5eaf3]">
+                  <th className="text-left px-6 h-[52px] text-[13px] font-bold text-[#475569]">日期</th>
+                  <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">供应商</th>
+                  <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">品类</th>
+                  <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">方式</th>
+                  <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569] w-1/4">沟通重点</th>
+                  <th className="text-center px-4 h-[52px] text-[13px] font-bold text-[#475569]">推荐跟进</th>
+                  <th className="text-right px-6 h-[52px] text-[13px] font-bold text-[#475569]">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {records.map((r) => (
-                  <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 text-gray-600">{new Date(r.date).toLocaleDateString()}</td>
-                    <td className="px-4 py-4 font-medium text-gray-800">
+                  <tr key={r.id} className="border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#f8fafc] transition-colors">
+                    <td className="px-6 h-[58px] text-[14px] text-[#475569]">{new Date(r.date).toLocaleDateString()}</td>
+                    <td className="px-4 h-[58px] text-[14px] font-bold text-[#0f172a]">
                       <Link href={`/suppliers/${r.supplierId}`} className="hover:text-blue-600 transition-colors">
                         {r.supplier.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-4 text-gray-600">{r.category.name}</td>
-                    <td className="px-4 py-4 text-gray-600">
+                    <td className="px-4 h-[58px] text-[14px] text-[#475569]">{r.category.name}</td>
+                    <td className="px-4 h-[58px] text-[14px] text-[#475569]">
                       <span className="inline-block px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200">
                         {r.type}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-gray-600 truncate max-w-xs" title={r.keyPoints || ''}>{r.keyPoints || '-'}</td>
+                    <td className="px-4 h-[58px] text-[14px] text-[#475569] truncate max-w-xs" title={r.keyPoints || ''}>{r.keyPoints || '-'}</td>
                     <td className="px-4 py-4 text-center">
                       {r.recommendFollowUp ? (
                         <span className="text-emerald-600 font-medium">✓ 是</span>
@@ -270,13 +270,13 @@ export default function InvestigationsPage() {
                     <td className="px-6 py-4 text-right whitespace-nowrap">
                       <button
                         onClick={() => handleOpenForm(r)}
-                        className="text-blue-600 hover:text-blue-800 mr-3 text-xs font-medium"
+                        className="text-[13px] font-semibold text-[#2563eb] hover:text-blue-800 mr-4"
                       >
                         编辑
                       </button>
                       <button
                         onClick={() => setArchiveTarget(r)}
-                        className="text-red-500 hover:text-red-700 text-xs font-medium"
+                        className="text-[13px] font-semibold text-[#ef4444] hover:text-red-700"
                       >
                         归档
                       </button>
@@ -302,24 +302,24 @@ export default function InvestigationsPage() {
         <form onSubmit={handleFormSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">记录类型 *</label>
+              <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">记录类型 *</label>
               <select required name="type" value={formData.type} onChange={handleFormChange} className="w-full border border-gray-300 rounded-md p-2">
                 {TYPE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">日期 *</label>
+              <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">日期 *</label>
               <input required type="date" name="date" value={formData.date} onChange={handleFormChange} className="w-full border border-gray-300 rounded-md p-2" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">供应商 *</label>
+              <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">供应商 *</label>
               <select required disabled={!!editingId} name="supplierId" value={formData.supplierId} onChange={handleFormChange} className="w-full border border-gray-300 rounded-md p-2">
                 <option value="">请选择</option>
                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">品类 *</label>
+              <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">品类 *</label>
               <select required name="categoryId" value={formData.categoryId} onChange={handleFormChange} className="w-full border border-gray-300 rounded-md p-2">
                 <option value="">请选择</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -329,49 +329,49 @@ export default function InvestigationsPage() {
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">地点</label>
+              <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">地点</label>
               <input type="text" name="location" value={formData.location} onChange={handleFormChange} className="w-full border border-gray-300 rounded-md p-2" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">参与人员</label>
+              <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">参与人员</label>
               <input type="text" name="participants" value={formData.participants} onChange={handleFormChange} className="w-full border border-gray-300 rounded-md p-2" />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">沟通重点</label>
+            <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">沟通重点</label>
             <textarea name="keyPoints" value={formData.keyPoints} onChange={handleFormChange} rows={2} className="w-full border border-gray-300 rounded-md p-2" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">产品亮点</label>
+              <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">产品亮点</label>
               <textarea name="productHighlights" value={formData.productHighlights} onChange={handleFormChange} rows={2} className="w-full border border-gray-300 rounded-md p-2" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">价格情况</label>
+              <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">价格情况</label>
               <textarea name="priceInfo" value={formData.priceInfo} onChange={handleFormChange} rows={2} className="w-full border border-gray-300 rounded-md p-2" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">资质情况</label>
+              <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">资质情况</label>
               <textarea name="qualificationInfo" value={formData.qualificationInfo} onChange={handleFormChange} rows={2} className="w-full border border-gray-300 rounded-md p-2" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">交付情况</label>
+              <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">交付情况</label>
               <textarea name="deliveryInfo" value={formData.deliveryInfo} onChange={handleFormChange} rows={2} className="w-full border border-gray-300 rounded-md p-2" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">售后情况</label>
+              <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">售后情况</label>
               <textarea name="afterSalesInfo" value={formData.afterSalesInfo} onChange={handleFormChange} rows={2} className="w-full border border-gray-300 rounded-md p-2" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">风险点</label>
+              <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">风险点</label>
               <textarea name="risks" value={formData.risks} onChange={handleFormChange} rows={2} className="w-full border border-gray-300 rounded-md p-2" />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">后续动作</label>
+            <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">后续动作</label>
             <textarea name="nextActions" value={formData.nextActions} onChange={handleFormChange} rows={2} className="w-full border border-gray-300 rounded-md p-2" />
           </div>
 

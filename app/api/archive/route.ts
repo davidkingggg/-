@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type PrismaDelegate = { findMany: (args: any) => Promise<Record<string, unknown>[]> }
+type PrismaDelegate = { findMany: (args: unknown) => Promise<Record<string, unknown>[]> }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getDelegate(model: string): PrismaDelegate {
   return (prisma as unknown as Record<string, PrismaDelegate>)[model]
 }

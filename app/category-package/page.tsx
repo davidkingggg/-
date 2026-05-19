@@ -99,14 +99,14 @@ export default function CategoryPackagePage() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">品类商务支持资料包</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="text-[22px] font-bold text-[#0f172a] mb-2">品类商务支持资料包</h1>
+        <p className="text-[13px] text-slate-400">
           按单个品类汇总供应商、报价、评分、风险、销售资料和老板决策事项，生成可预览、可复制、可导出的 Markdown/CSV 资料包。默认仅使用未归档数据。
         </p>
       </div>
 
       {/* 筛选栏 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <div className="rounded-[20px] bg-white border border-[#e5eaf3] overflow-hidden p-5" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-600">品类：</label>
@@ -114,7 +114,7 @@ export default function CategoryPackagePage() {
               value={categoryId}
               onFocus={loadCategories}
               onChange={(e) => setCategoryId(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[160px]"
+              className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20 min-w-[160px]"
             >
               <option value="">请选择品类</option>
               {categories.map((c) => (
@@ -128,14 +128,14 @@ export default function CategoryPackagePage() {
               type="date"
               value={quoteStartDate}
               onChange={(e) => setQuoteStartDate(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
             <span className="text-gray-400">至</span>
             <input
               type="date"
               value={quoteEndDate}
               onChange={(e) => setQuoteEndDate(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
@@ -150,7 +150,7 @@ export default function CategoryPackagePage() {
           <button
             onClick={handleGenerate}
             disabled={loading || !categoryId}
-            className="px-5 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors text-[13px] font-semibold"
           >
             {loading ? '生成中…' : '生成资料包'}
           </button>
@@ -160,18 +160,18 @@ export default function CategoryPackagePage() {
       {/* 导出栏 */}
       {data && (
         <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={handleCopyMarkdown} className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+          <button onClick={handleCopyMarkdown} className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium">
             复制 Markdown
           </button>
-          <button onClick={() => handleExport('markdown')} className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+          <button onClick={() => handleExport('markdown')} className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm">
             导出 Markdown
           </button>
-          <button onClick={() => handleExport('csv')} className="px-4 py-2 text-sm text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors">
+          <button onClick={() => handleExport('csv')} className="h-9 px-5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors text-[13px] font-semibold shadow-sm">
             导出 CSV
           </button>
           <button
             onClick={() => setShowMarkdownSource(!showMarkdownSource)}
-            className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700"
+            className="h-9 px-3 text-[12px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
           >
             {showMarkdownSource ? '预览渲染效果' : '查看 Markdown 源码'}
           </button>
@@ -187,7 +187,7 @@ export default function CategoryPackagePage() {
 
       {/* 预览区 */}
       {data && !showMarkdownSource && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6 text-sm">
+        <div className="rounded-[20px] bg-white border border-[#e5eaf3] overflow-hidden p-6 space-y-6 text-sm" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
           <p className="text-xs text-gray-400">
             生成时间：{new Date(data.generatedAt).toLocaleString('zh-CN', { hour12: false })}　|　数据范围：仅未归档数据
             {includeNotes ? '　|　含内部备注' : ''}
@@ -230,18 +230,18 @@ export default function CategoryPackagePage() {
                     <span className="text-gray-400 font-normal ml-2">({group.length})</span>
                   </h3>
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50 text-gray-600">
+                    <thead className="bg-[#f8fafc] border-b border-[#e5eaf3]">
                       <tr>
-                        <th className="px-3 py-2 text-left font-medium">供应商</th>
-                        <th className="px-3 py-2 text-left font-medium">地区</th>
-                        <th className="px-3 py-2 text-left font-medium">公司性质</th>
-                        <th className="px-3 py-2 text-left font-medium">合作意愿</th>
-                        <th className="px-3 py-2 text-left font-medium">价格水平</th>
-                        <th className="px-3 py-2 text-center font-medium">已报价</th>
-                        <th className="px-3 py-2 text-center font-medium">已考察</th>
+                        <th className="px-3 py-2 text-left font-bold text-[#475569]">供应商</th>
+                        <th className="px-3 py-2 text-left font-bold text-[#475569]">地区</th>
+                        <th className="px-3 py-2 text-left font-bold text-[#475569]">公司性质</th>
+                        <th className="px-3 py-2 text-left font-bold text-[#475569]">合作意愿</th>
+                        <th className="px-3 py-2 text-left font-bold text-[#475569]">价格水平</th>
+                        <th className="px-3 py-2 text-center font-bold text-[#475569]">已报价</th>
+                        <th className="px-3 py-2 text-center font-bold text-[#475569]">已考察</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-[#f1f5f9]">
                       {group.map((s) => (
                         <tr key={s.id}>
                           <td className="px-3 py-2 text-gray-800">{s.name}</td>
@@ -268,19 +268,19 @@ export default function CategoryPackagePage() {
             ) : (
               <>
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 text-gray-600">
+                  <thead className="bg-[#f8fafc] border-b border-[#e5eaf3]">
                     <tr>
-                      <th className="px-3 py-2 text-left font-medium">编号</th>
-                      <th className="px-3 py-2 text-left font-medium">供应商</th>
-                      <th className="px-3 py-2 text-left font-medium">日期</th>
-                      <th className="px-3 py-2 text-left font-medium">阶段</th>
-                      <th className="px-3 py-2 text-left font-medium">来源</th>
-                      <th className="px-3 py-2 text-center font-medium">明细</th>
-                      <th className="px-3 py-2 text-right font-medium">最低价</th>
-                      <th className="px-3 py-2 text-center font-medium">附件</th>
+                      <th className="px-3 py-2 text-left font-bold text-[#475569]">编号</th>
+                      <th className="px-3 py-2 text-left font-bold text-[#475569]">供应商</th>
+                      <th className="px-3 py-2 text-left font-bold text-[#475569]">日期</th>
+                      <th className="px-3 py-2 text-left font-bold text-[#475569]">阶段</th>
+                      <th className="px-3 py-2 text-left font-bold text-[#475569]">来源</th>
+                      <th className="px-3 py-2 text-center font-bold text-[#475569]">明细</th>
+                      <th className="px-3 py-2 text-right font-bold text-[#475569]">最低价</th>
+                      <th className="px-3 py-2 text-center font-bold text-[#475569]">附件</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-[#f1f5f9]">
                     {data.quotes.map((q) => (
                       <tr key={q.id}>
                         <td className="px-3 py-2 text-gray-800">{q.quoteNumber || '-'}</td>
@@ -304,17 +304,17 @@ export default function CategoryPackagePage() {
           <section>
             <h2 className="text-lg font-semibold text-gray-800 mb-3">四、供应商评分与风险</h2>
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-600">
+              <thead className="bg-[#f8fafc] border-b border-[#e5eaf3]">
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium">供应商</th>
-                  <th className="px-3 py-2 text-right font-medium">总分</th>
-                  <th className="px-3 py-2 text-left font-medium">等级</th>
-                  <th className="px-3 py-2 text-left font-medium">评分日期</th>
-                  <th className="px-3 py-2 text-left font-medium">评分人</th>
-                  <th className="px-3 py-2 text-left font-medium">风险标签</th>
+                  <th className="px-3 py-2 text-left font-bold text-[#475569]">供应商</th>
+                  <th className="px-3 py-2 text-right font-bold text-[#475569]">总分</th>
+                  <th className="px-3 py-2 text-left font-bold text-[#475569]">等级</th>
+                  <th className="px-3 py-2 text-left font-bold text-[#475569]">评分日期</th>
+                  <th className="px-3 py-2 text-left font-bold text-[#475569]">评分人</th>
+                  <th className="px-3 py-2 text-left font-bold text-[#475569]">风险标签</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-[#f1f5f9]">
                 {data.suppliers.map((s) => {
                   const sc = data.scores.find((x) => x.supplierId === s.id)
                   return (
@@ -375,18 +375,18 @@ export default function CategoryPackagePage() {
               <p className="text-gray-400">暂无需要老板决策的事项。</p>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-gray-600">
+                <thead className="bg-[#f8fafc] border-b border-[#e5eaf3]">
                   <tr>
-                    <th className="px-3 py-2 text-left font-medium">类型</th>
-                    <th className="px-3 py-2 text-left font-medium">事项</th>
-                    <th className="px-3 py-2 text-left font-medium">供应商</th>
-                    <th className="px-3 py-2 text-left font-medium">负责人</th>
-                    <th className="px-3 py-2 text-left font-medium">优先级</th>
-                    <th className="px-3 py-2 text-left font-medium">状态</th>
-                    <th className="px-3 py-2 text-left font-medium">截止日期</th>
+                    <th className="px-3 py-2 text-left font-bold text-[#475569]">类型</th>
+                    <th className="px-3 py-2 text-left font-bold text-[#475569]">事项</th>
+                    <th className="px-3 py-2 text-left font-bold text-[#475569]">供应商</th>
+                    <th className="px-3 py-2 text-left font-bold text-[#475569]">负责人</th>
+                    <th className="px-3 py-2 text-left font-bold text-[#475569]">优先级</th>
+                    <th className="px-3 py-2 text-left font-bold text-[#475569]">状态</th>
+                    <th className="px-3 py-2 text-left font-bold text-[#475569]">截止日期</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-[#f1f5f9]">
                   {data.decisions.map((d) => (
                     <tr key={d.id}>
                       <td className="px-3 py-2 text-gray-500">{d.sourceLabel}</td>

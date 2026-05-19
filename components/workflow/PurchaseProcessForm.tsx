@@ -25,6 +25,7 @@ export default function PurchaseProcessForm({
 
   const [form, setForm] = useState({
     title: initialData?.title || '',
+    companyName: initialData?.companyName || '',
     supplierId: initialData?.supplierId || initialSupplierId || '',
     categoryId: initialData?.categoryId || initialCategoryId || '',
     requesterId: initialData?.requesterId || '',
@@ -102,6 +103,10 @@ export default function PurchaseProcessForm({
           <div className="col-span-2">
             <label className={lc}>采购事项名称 <span className="text-red-500">*</span></label>
             <input required type="text" className={ic} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          </div>
+          <div>
+            <label className={lc}>所属公司</label>
+            <input type="text" className={ic} value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })} />
           </div>
           <div>
             <label className={lc}>供应商 <span className="text-red-500">*</span></label>

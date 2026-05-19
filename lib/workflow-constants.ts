@@ -33,6 +33,10 @@ export const DEVELOPMENT_STATUSES = ['进行中', '已完成', '暂停', '淘汰
 
 export const PURCHASE_STATUSES = ['进行中', '已完成', '暂停', '异常'] as const;
 
+// 供应商常用标签（可选点选，也可自定义输入）
+export const COMMON_COMPANY_TYPES = ['厂家', '代理商', '经销商', '服务商', '安装公司', '其他'] as const;
+export const COMMON_SOURCES = ['展会', '网络', '老板推荐', '销售推荐', '供应商转介绍', '其他'] as const;
+
 // Types
 export type DevelopmentStage = typeof DEVELOPMENT_STAGES[number];
 export type PurchaseStage = typeof PURCHASE_STAGES[number];

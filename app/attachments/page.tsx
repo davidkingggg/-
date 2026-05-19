@@ -144,7 +144,7 @@ export default function AttachmentsPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      <h1 className="text-2xl font-bold text-gray-800 mb-2">附件路径中心</h1>
+      <h1 className="text-[22px] font-bold text-[#0f172a] mb-2">附件路径中心</h1>
       <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
         本功能仅维护数据库中的附件路径记录，不处理真实文件。不检查文件是否存在，不支持上传、下载、预览或扫描。如需管理实际文件请使用系统文件管理器。
       </p>
@@ -157,7 +157,7 @@ export default function AttachmentsPage() {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="搜索文件名、路径、备注"
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20 w-48"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -165,7 +165,7 @@ export default function AttachmentsPage() {
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           >
             <option value="">全部</option>
             {relatedTypes.map((t) => (
@@ -178,7 +178,7 @@ export default function AttachmentsPage() {
           <select
             value={filterFileType}
             onChange={(e) => setFilterFileType(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           >
             <option value="">全部</option>
             {fileTypes.map((t) => (
@@ -204,28 +204,28 @@ export default function AttachmentsPage() {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-gray-100 text-gray-600">
+            <thead className="bg-[#f8fafc] text-[#475569]">
               <tr>
-                <th className="px-3 py-2 font-medium">文件名</th>
-                <th className="px-3 py-2 font-medium">文件路径</th>
-                <th className="px-3 py-2 font-medium">类型</th>
-                <th className="px-3 py-2 font-medium">关联对象</th>
-                <th className="px-3 py-2 font-medium">备注</th>
-                <th className="px-3 py-2 font-medium">创建时间</th>
-                <th className="px-3 py-2 font-medium w-28">操作</th>
+                <th className="px-3 h-[52px] text-[13px] font-bold">文件名</th>
+                <th className="px-3 h-[52px] text-[13px] font-bold">文件路径</th>
+                <th className="px-3 h-[52px] text-[13px] font-bold">类型</th>
+                <th className="px-3 h-[52px] text-[13px] font-bold">关联对象</th>
+                <th className="px-3 h-[52px] text-[13px] font-bold">备注</th>
+                <th className="px-3 h-[52px] text-[13px] font-bold">创建时间</th>
+                <th className="px-3 h-[52px] text-[13px] font-bold w-28">操作</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-[#f1f5f9]">
               {records.map((r) => (
-                <tr key={r.id} className={`hover:bg-gray-50 ${r.isArchived ? 'opacity-50' : ''}`}>
-                  <td className="px-3 py-2 text-gray-800 max-w-[150px] truncate" title={r.fileName}>{r.fileName || '-'}</td>
-                  <td className="px-3 py-2 text-gray-500 max-w-[200px] truncate" title={r.filePath}>{r.filePath || '-'}</td>
-                  <td className="px-3 py-2 text-gray-500">{r.fileType || '-'}</td>
+                <tr key={r.id} className={`hover:bg-[#f8fafc] ${r.isArchived ? 'opacity-50' : ''}`}>
+                  <td className="px-3 h-[58px] text-[14px] font-bold text-[#0f172a] max-w-[150px] truncate" title={r.fileName}>{r.fileName || '-'}</td>
+                  <td className="px-3 h-[58px] text-gray-500 max-w-[200px] truncate" title={r.filePath}>{r.filePath || '-'}</td>
+                  <td className="px-3 h-[58px] text-gray-500">{r.fileType || '-'}</td>
                   <td className="px-3 py-2">
                     {getRelatedLink(r) ? (
                       <Link
                         href={getRelatedLink(r)!}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-[13px] font-semibold text-[#2563eb] hover:text-blue-800"
                       >
                         {getRelatedLabel(r)}
                       </Link>
@@ -233,13 +233,13 @@ export default function AttachmentsPage() {
                       <span className="text-gray-500">{r.relatedType}</span>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-gray-500 max-w-[120px] truncate" title={r.notes || ''}>{r.notes || '-'}</td>
-                  <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{formatDate(r.createdAt)}</td>
-                  <td className="px-3 py-2 whitespace-nowrap">
+                  <td className="px-3 h-[58px] text-gray-500 max-w-[120px] truncate" title={r.notes || ''}>{r.notes || '-'}</td>
+                  <td className="px-3 h-[58px] text-gray-500 whitespace-nowrap">{formatDate(r.createdAt)}</td>
+                  <td className="px-3 h-[58px] whitespace-nowrap">
                     {!r.isArchived && (
                       <div className="flex gap-2">
-                        <button onClick={() => openEdit(r)} className="text-blue-600 hover:text-blue-800 text-sm">编辑</button>
-                        <button onClick={() => setArchiveTarget(r)} className="text-red-600 hover:text-red-800 text-sm">归档</button>
+                        <button onClick={() => openEdit(r)} className="text-[13px] font-semibold text-[#2563eb] hover:text-blue-800 mr-4">编辑</button>
+                        <button onClick={() => setArchiveTarget(r)} className="text-[13px] font-semibold text-[#ef4444] hover:text-red-700">归档</button>
                       </div>
                     )}
                   </td>
@@ -265,7 +265,7 @@ export default function AttachmentsPage() {
                   type="text"
                   value={editForm.fileName}
                   onChange={(e) => setEditForm({ ...editForm, fileName: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
               <div>
@@ -274,7 +274,7 @@ export default function AttachmentsPage() {
                   type="text"
                   value={editForm.filePath}
                   onChange={(e) => setEditForm({ ...editForm, filePath: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
               <div>
@@ -283,7 +283,7 @@ export default function AttachmentsPage() {
                   type="text"
                   value={editForm.fileType}
                   onChange={(e) => setEditForm({ ...editForm, fileType: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                   placeholder="如 pdf、xlsx"
                 />
               </div>
@@ -293,13 +293,13 @@ export default function AttachmentsPage() {
                   type="text"
                   value={editForm.notes}
                   onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setEditTarget(null)} className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">取消</button>
-              <button onClick={handleEdit} className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700">保存</button>
+              <button onClick={() => setEditTarget(null)} className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium">取消</button>
+              <button onClick={handleEdit} className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm">保存</button>
             </div>
           </div>
         </div>

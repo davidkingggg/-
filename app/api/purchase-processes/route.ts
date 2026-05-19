@@ -88,6 +88,7 @@ export async function POST(request: Request) {
       hasPrepaymentOffset,
       status,
       remark,
+      companyName,
     } = body;
 
     if (!title) {
@@ -152,6 +153,7 @@ export async function POST(request: Request) {
         hasPrepaymentOffset: Boolean(hasPrepaymentOffset),
         status,
         remark: remark || null,
+        companyName: companyName || null,
       },
     });
 

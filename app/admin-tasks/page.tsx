@@ -229,23 +229,23 @@ export default function AdminTasksPage() {
     <div className="p-6">
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">行政事项</h1>
-          <p className="mt-1 text-sm text-gray-600">独立管理会议、周报、接待和办公采购等行政事项。</p>
+          <h1 className="text-[22px] font-bold text-[#0f172a]">行政事项</h1>
+          <p className="text-[13px] text-slate-400 mt-0.5">独立管理会议、周报、接待和办公采购等行政事项。</p>
         </div>
         <button
           type="button"
           onClick={openCreate}
-          className="w-fit rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
+          className="w-fit h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm"
         >
           新增行政事项
         </button>
       </div>
 
-      <div className="mb-4 grid gap-3 rounded-lg border border-gray-100 bg-white p-4 shadow-sm md:grid-cols-5">
+      <div className="mb-4 grid gap-3 rounded-[20px] border border-[#e5eaf3] bg-white p-4 md:grid-cols-5" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
         <select
           value={filterType}
           onChange={(event) => setFilterType(event.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部类型</option>
           {typeOptions.map((type) => (
@@ -255,7 +255,7 @@ export default function AdminTasksPage() {
         <select
           value={filterStatus}
           onChange={(event) => setFilterStatus(event.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部状态</option>
           {STATUSES.map((status) => (
@@ -265,7 +265,7 @@ export default function AdminTasksPage() {
         <select
           value={filterPriority}
           onChange={(event) => setFilterPriority(event.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部优先级</option>
           {PRIORITIES.map((priority) => (
@@ -275,7 +275,7 @@ export default function AdminTasksPage() {
         <select
           value={filterOverdue}
           onChange={(event) => setFilterOverdue(event.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部期限</option>
           <option value="true">仅看超期</option>
@@ -284,13 +284,13 @@ export default function AdminTasksPage() {
         <button
           type="button"
           onClick={resetFilters}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium"
         >
           清空筛选
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-[20px] border border-[#e5eaf3] bg-white" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
         {loading ? (
           <div className="py-16 text-center text-sm text-gray-400">正在加载行政事项...</div>
         ) : tasks.length === 0 ? (
@@ -299,63 +299,63 @@ export default function AdminTasksPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50 text-left text-gray-600">
-                  <th className="px-5 py-3 font-semibold">事项名称</th>
-                  <th className="px-4 py-3 font-semibold">类型</th>
-                  <th className="px-4 py-3 font-semibold">优先级</th>
-                  <th className="px-4 py-3 font-semibold">截止日期</th>
-                  <th className="px-4 py-3 font-semibold">状态</th>
-                  <th className="px-4 py-3 font-semibold">完成时间</th>
-                  <th className="px-4 py-3 font-semibold">快速状态</th>
-                  <th className="px-5 py-3 text-right font-semibold">操作</th>
+                <tr className="bg-[#f8fafc] border-b border-[#e5eaf3] text-left">
+                  <th className="px-5 h-[52px] text-[13px] font-bold text-[#475569]">事项名称</th>
+                  <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">类型</th>
+                  <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">优先级</th>
+                  <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">截止日期</th>
+                  <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">状态</th>
+                  <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">完成时间</th>
+                  <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">快速状态</th>
+                  <th className="px-5 h-[52px] text-[13px] font-bold text-[#475569] text-right">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {tasks.map((task) => (
-                  <tr key={task.id} className="border-b border-gray-50 transition-colors hover:bg-gray-50/70">
-                    <td className="px-5 py-4">
-                      <div className="font-medium text-gray-900">{task.title}</div>
+                  <tr key={task.id} className="border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#f8fafc]">
+                    <td className="px-5 h-[58px]">
+                      <div className="text-[14px] font-bold text-[#0f172a]">{task.title}</div>
                       {task.notes ? <div className="mt-1 max-w-xs truncate text-xs text-gray-500">{task.notes}</div> : null}
                     </td>
-                    <td className="px-4 py-4 text-gray-700">{task.type}</td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 h-[58px] text-gray-700">{task.type}</td>
+                    <td className="px-4 h-[58px]">
                       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${priorityClass(task.priority)}`}>
                         {task.priority || '-'}
                       </span>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 h-[58px]">
                       <div className="text-gray-700">{formatDate(task.dueDate)}</div>
                       {isTaskOverdue(task) ? <div className="mt-1 text-xs font-medium text-red-600">已超期</div> : null}
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 h-[58px]">
                       <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusClass(task.status)}`}>
                         {task.status}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-gray-600">{formatDate(task.completedAt)}</td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 h-[58px] text-gray-600">{formatDate(task.completedAt)}</td>
+                    <td className="px-4 h-[58px]">
                       <select
                         value={task.status}
                         onChange={(event) => updateStatus(task, event.target.value)}
-                        className="rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                        className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                       >
                         {STATUSES.map((status) => (
                           <option key={status} value={status}>{status}</option>
                         ))}
                       </select>
                     </td>
-                    <td className="px-5 py-4 text-right">
+                    <td className="px-5 h-[58px] text-right">
                       <button
                         type="button"
                         onClick={() => openEdit(task)}
-                        className="mr-3 text-xs font-medium text-blue-600 hover:text-blue-800"
+                        className="text-[13px] font-semibold text-[#2563eb] hover:text-blue-800 mr-4"
                       >
                         编辑
                       </button>
                       <button
                         type="button"
                         onClick={() => setArchiveTarget(task)}
-                        className="text-xs font-medium text-red-600 hover:text-red-700"
+                        className="text-[13px] font-semibold text-[#ef4444] hover:text-red-700"
                       >
                         归档
                       </button>
@@ -381,7 +381,7 @@ export default function AdminTasksPage() {
               type="text"
               value={form.title}
               onChange={(event) => setForm({ ...form, title: event.target.value })}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               required
             />
           </div>
@@ -394,7 +394,7 @@ export default function AdminTasksPage() {
                 list="admin-task-types"
                 value={form.type}
                 onChange={(event) => setForm({ ...form, type: event.target.value })}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 required
               />
               <datalist id="admin-task-types">
@@ -409,7 +409,7 @@ export default function AdminTasksPage() {
                 type="date"
                 value={form.dueDate}
                 onChange={(event) => setForm({ ...form, dueDate: event.target.value })}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
             </div>
           </div>
@@ -420,7 +420,7 @@ export default function AdminTasksPage() {
               <select
                 value={form.priority}
                 onChange={(event) => setForm({ ...form, priority: event.target.value })}
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 {PRIORITIES.map((priority) => (
                   <option key={priority} value={priority}>{priority}</option>
@@ -432,7 +432,7 @@ export default function AdminTasksPage() {
               <select
                 value={form.status}
                 onChange={(event) => setForm({ ...form, status: event.target.value })}
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 {STATUSES.map((status) => (
                   <option key={status} value={status}>{status}</option>
@@ -456,7 +456,7 @@ export default function AdminTasksPage() {
               value={form.notes}
               onChange={(event) => setForm({ ...form, notes: event.target.value })}
               rows={4}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
 
@@ -464,14 +464,14 @@ export default function AdminTasksPage() {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-200"
+              className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium"
             >
               取消
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving ? '保存中...' : '保存'}
             </button>

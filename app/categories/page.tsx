@@ -142,7 +142,7 @@ export default function CategoriesPage() {
   function renderBadge(value: string | null, colorMap: Record<string, string>) {
     if (!value) return <span className="text-gray-300">-</span>
     const color = colorMap[value] || 'bg-gray-100 text-gray-600'
-    return <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>{value}</span>
+    return <span className={`inline-flex items-center h-6 px-2.5 rounded-full text-[12px] font-semibold ${color}`}>{value}</span>
   }
 
   const levelColors: Record<string, string> = {
@@ -155,12 +155,12 @@ export default function CategoriesPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">品类中心</h1>
-          <p className="text-sm text-gray-500 mt-1">管理锅炉行业重点采购品类</p>
+          <h1 className="text-[22px] font-bold text-[#0f172a]">品类中心</h1>
+          <p className="text-[13px] text-slate-400 mt-0.5">管理锅炉行业重点采购品类</p>
         </div>
         <button
           onClick={openCreate}
-          className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
+          className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm"
         >
           + 新增品类
         </button>
@@ -171,7 +171,7 @@ export default function CategoriesPage() {
         <select
           value={filterPriority}
           onChange={(e) => setFilterPriority(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部推广状态</option>
           <option value="true">优先推广</option>
@@ -180,7 +180,7 @@ export default function CategoriesPage() {
         <select
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部品类类型</option>
           {typeOptions.map((t) => (
@@ -190,7 +190,7 @@ export default function CategoriesPage() {
       </div>
 
       {/* 表格 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="rounded-[20px] bg-white border border-[#e5eaf3] overflow-hidden" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
         {loading ? (
           <div className="text-center text-gray-400 py-16">加载中...</div>
         ) : categories.length === 0 ? (
@@ -198,24 +198,24 @@ export default function CategoriesPage() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="text-left px-6 py-3.5 font-semibold text-gray-600">品类名称</th>
-                <th className="text-left px-4 py-3.5 font-semibold text-gray-600">品类类型</th>
-                <th className="text-center px-4 py-3.5 font-semibold text-gray-600">优先推广</th>
-                <th className="text-center px-4 py-3.5 font-semibold text-gray-600">标准化程度</th>
-                <th className="text-center px-4 py-3.5 font-semibold text-gray-600">售后风险</th>
-                <th className="text-center px-4 py-3.5 font-semibold text-gray-600">采购频率</th>
-                <th className="text-right px-6 py-3.5 font-semibold text-gray-600">操作</th>
+              <tr className="bg-[#f8fafc] border-b border-[#e5eaf3]">
+                <th className="text-left px-6 h-[52px] text-[13px] font-bold text-[#475569]">品类名称</th>
+                <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">品类类型</th>
+                <th className="text-center px-4 h-[52px] text-[13px] font-bold text-[#475569]">优先推广</th>
+                <th className="text-center px-4 h-[52px] text-[13px] font-bold text-[#475569]">标准化程度</th>
+                <th className="text-center px-4 h-[52px] text-[13px] font-bold text-[#475569]">售后风险</th>
+                <th className="text-center px-4 h-[52px] text-[13px] font-bold text-[#475569]">采购频率</th>
+                <th className="text-right px-6 h-[52px] text-[13px] font-bold text-[#475569]">操作</th>
               </tr>
             </thead>
             <tbody>
               {categories.map((cat) => (
-                <tr key={cat.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-800">{cat.name}</td>
-                  <td className="px-4 py-4 text-gray-600">{cat.type || '-'}</td>
+                <tr key={cat.id} className="border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#f8fafc] transition-colors">
+                  <td className="px-6 h-[58px] text-[14px] font-bold text-[#0f172a]">{cat.name}</td>
+                  <td className="px-4 h-[58px] text-[14px] text-[#475569]">{cat.type || '-'}</td>
                   <td className="px-4 py-4 text-center">
                     {cat.isPriority ? (
-                      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">是</span>
+                      <span className="inline-flex items-center h-6 px-2.5 rounded-full text-[12px] font-semibold bg-blue-50 text-blue-700">是</span>
                     ) : (
                       <span className="text-gray-300">否</span>
                     )}
@@ -226,13 +226,13 @@ export default function CategoriesPage() {
                   <td className="px-6 py-4 text-right">
                     <button
                       onClick={() => openEdit(cat)}
-                      className="text-blue-600 hover:text-blue-800 mr-3 text-xs font-medium"
+                      className="text-[13px] font-semibold text-[#2563eb] hover:text-blue-800 mr-4"
                     >
                       编辑
                     </button>
                     <button
                       onClick={() => setArchiveTarget(cat)}
-                      className="text-red-500 hover:text-red-700 text-xs font-medium"
+                      className="text-[13px] font-semibold text-[#ef4444] hover:text-red-700"
                     >
                       归档
                     </button>
@@ -248,54 +248,54 @@ export default function CategoriesPage() {
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editingId ? '编辑品类' : '新增品类'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">品类名称 <span className="text-red-500">*</span></label>
+            <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">品类名称 <span className="text-red-500">*</span></label>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className="w-full h-10 border border-[#e5eaf3] rounded-xl px-3 text-[14px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">品类类型</label>
+            <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">品类类型</label>
             <input
               type="text"
               value={form.type}
               onChange={(e) => setForm({ ...form, type: e.target.value })}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className="w-full h-10 border border-[#e5eaf3] rounded-xl px-3 text-[14px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
               placeholder="如：管道部件、动力设备"
             />
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">标准化程度</label>
+              <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">标准化程度</label>
               <select
                 value={form.standardLevel}
                 onChange={(e) => setForm({ ...form, standardLevel: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 <option value="">请选择</option>
                 {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">售后风险</label>
+              <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">售后风险</label>
               <select
                 value={form.afterSalesRisk}
                 onChange={(e) => setForm({ ...form, afterSalesRisk: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 <option value="">请选择</option>
                 {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">采购频率</label>
+              <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">采购频率</label>
               <select
                 value={form.purchaseFrequency}
                 onChange={(e) => setForm({ ...form, purchaseFrequency: e.target.value })}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 <option value="">请选择</option>
                 {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
@@ -313,26 +313,26 @@ export default function CategoriesPage() {
             <label htmlFor="isPriority" className="text-sm text-gray-700">优先推广</label>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+            <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">备注</label>
             <textarea
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               rows={2}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className="w-full h-10 border border-[#e5eaf3] rounded-xl px-3 text-[14px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium"
             >
               取消
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-5 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="h-10 px-6 text-[13px] text-white bg-[#2563eb] rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors font-semibold"
             >
               {saving ? '保存中...' : '保存'}
             </button>

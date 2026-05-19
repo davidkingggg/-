@@ -34,12 +34,12 @@ export async function PUT(
       where: { id },
       data: {
         name: body.name.trim(),
-        type: body.type ?? existing.type,
+        type: body.type !== undefined ? body.type : existing.type,
         isPriority: body.isPriority ?? existing.isPriority,
-        standardLevel: body.standardLevel ?? existing.standardLevel,
-        afterSalesRisk: body.afterSalesRisk ?? existing.afterSalesRisk,
-        purchaseFrequency: body.purchaseFrequency ?? existing.purchaseFrequency,
-        notes: body.notes ?? existing.notes,
+        standardLevel: body.standardLevel !== undefined ? body.standardLevel : existing.standardLevel,
+        afterSalesRisk: body.afterSalesRisk !== undefined ? body.afterSalesRisk : existing.afterSalesRisk,
+        purchaseFrequency: body.purchaseFrequency !== undefined ? body.purchaseFrequency : existing.purchaseFrequency,
+        notes: body.notes !== undefined ? body.notes : existing.notes,
       },
     })
     return NextResponse.json(category)

@@ -42,8 +42,14 @@ export async function POST(request: NextRequest) {
       deliveryInfo, afterSalesInfo, risks, nextActions, recommendFollowUp, notes
     } = body;
 
-    if (!type || !supplierId || !categoryId || !date) {
-      return NextResponse.json({ error: "请填写完整基础信息" }, { status: 400 });
+    if (!type || !date) {
+      return NextResponse.json({ error: "请填写记录类型和日期" }, { status: 400 });
+    }
+    if (!supplierId) {
+      return NextResponse.json({ error: "请选择供应商，或先创建新供应商后再保存记录" }, { status: 400 });
+    }
+    if (!categoryId) {
+      return NextResponse.json({ error: "请选择品类" }, { status: 400 });
     }
 
     const record = await db.investigationRecord.create({
@@ -64,7 +70,11 @@ export async function POST(request: NextRequest) {
         nextActions,
         recommendFollowUp: Boolean(recommendFollowUp),
         notes
-      }
+      },
+      include: {
+        supplier: { select: { name: true } },
+        category: { select: { name: true } },
+      },
     });
 
     return NextResponse.json(record);

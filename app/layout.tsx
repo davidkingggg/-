@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import AppLayout from "@/components/layout/AppLayout";
 import { ClientProviders } from "@/components/layout/ClientProviders";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "个人工作库 - 集成采购平台",
@@ -18,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN">
-      <body className={`${inter.className} text-gray-900 bg-gray-50`}>
+      <body className="bg-gray-50 text-gray-900">
         <ClientProviders>
           <AppLayout>
             {children}

@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import TaskFilters from '@/components/tasks/TaskFilters'
-import TaskSection from '@/components/tasks/TaskSection'
+import TaskItemCard from '@/components/tasks/TaskItemCard'
 import TaskSummaryCards from '@/components/tasks/TaskSummaryCards'
-import type { LookupOption, TaskFiltersValue, TaskResponse } from '@/components/tasks/task-types'
+import type { LookupOption, TaskFiltersValue, TaskItem, TaskResponse } from '@/components/tasks/task-types'
 
 const emptyFilters: TaskFiltersValue = {
   source: '',
@@ -34,6 +34,15 @@ const emptyResponse: TaskResponse = {
   },
 }
 
+const quickTabs = [
+  { key: 'all', label: '全部' },
+  { key: 'overdue', label: '超期' },
+  { key: 'week', label: '本周' },
+  { key: 'highPriority', label: '高优先级' },
+  { key: 'bossDecision', label: '老板决策' },
+  { key: 'admin', label: '行政事项' },
+]
+
 export default function TasksPage() {
   const [filters, setFilters] = useState<TaskFiltersValue>(emptyFilters)
   const [data, setData] = useState<TaskResponse>(emptyResponse)
@@ -41,11 +50,12 @@ export default function TasksPage() {
   const [people, setPeople] = useState<LookupOption[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [activeTab, setActiveTab] = useState('all')
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams()
     Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.set(key, value)
+      if (value && key !== 'scope') params.set(key, value)
     })
     return params.toString()
   }, [filters])
@@ -109,36 +119,148 @@ export default function TasksPage() {
     }
   }, [queryString])
 
+  // Merge all sections into one list for client-side tab filtering
+  const allTasks = useMemo(() => {
+    const seen = new Set<string>()
+    const result: TaskItem[] = []
+    for (const section of Object.values(data.sections)) {
+      for (const item of section) {
+        const key = `${item.source}-${item.id}`
+        if (!seen.has(key)) {
+          seen.add(key)
+          result.push(item)
+        }
+      }
+    }
+    return result
+  }, [data])
+
+  // Quick tab counts
+  const tabCounts = useMemo(() => ({
+    all: allTasks.length,
+    overdue: data.summary.overdueCount,
+    week: data.summary.weekCount,
+    highPriority: allTasks.filter((t) => t.priority === '高').length,
+    bossDecision: data.summary.bossDecisionCount,
+    admin: data.summary.adminCount,
+  }), [allTasks, data.summary])
+
+  // Filtered tasks by active tab
+  const filteredTasks = useMemo(() => {
+    switch (activeTab) {
+      case 'overdue':
+        return allTasks.filter((t) => t.isOverdue)
+      case 'week':
+        return allTasks.filter((t) => t.isThisWeek)
+      case 'highPriority':
+        return allTasks.filter((t) => t.priority === '高')
+      case 'bossDecision':
+        return allTasks.filter((t) => t.needBossDecision)
+      case 'admin':
+        return allTasks.filter((t) => t.source === 'admin')
+      default:
+        return allTasks
+    }
+  }, [allTasks, activeTab])
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab)
+    // Clear scope filter since we do client-side tab filtering
+    if (filters.scope) {
+      setFilters((prev) => ({ ...prev, scope: '' }))
+    }
+  }
+
   return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">待办中心</h1>
-        <p className="mt-1 text-sm text-gray-600">数据来自开发流程、采购流程和行政事项聚合，仅用于只读查看与来源跳转。</p>
-      </div>
-
-      <TaskSummaryCards summary={data.summary} />
-
-      <TaskFilters
-        value={filters}
-        categories={categories}
-        people={people}
-        onChange={setFilters}
-        onReset={() => setFilters(emptyFilters)}
-      />
-
-      {error && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
-
-      {loading ? (
-        <div className="rounded-lg border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">待办数据加载中...</div>
-      ) : (
-        <div className="space-y-8">
-          <TaskSection title="本周待办" items={data.sections.week} />
-          <TaskSection title="超期待办" items={data.sections.overdue} />
-          <TaskSection title="老板决策事项" items={data.sections.bossDecision} />
-          <TaskSection title="销售配合事项" items={data.sections.salesSupport} />
-          <TaskSection title="行政事项" items={data.sections.admin} />
+    <div style={{ background: '#f6f8fb', minHeight: '100vh' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '28px 32px 48px' }}>
+        {/* 页面标题 */}
+        <div style={{ marginBottom: 20 }}>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: '#0f172a' }}>
+            待办中心
+          </h1>
+          <p style={{ marginTop: 6, fontSize: 14, color: '#64748b' }}>
+            采购执行、供应商开发、行政事项等综合待办处理中心
+          </p>
         </div>
-      )}
+
+        {/* 统计卡 */}
+        <TaskSummaryCards summary={data.summary} activeTab={activeTab} onTabChange={handleTabChange} />
+
+        {/* 快捷 Tab */}
+        <div className="flex flex-wrap items-center gap-2" style={{ margin: '20px 0 16px' }}>
+          {quickTabs.map((tab) => {
+            const isActive = activeTab === tab.key
+            const count = tabCounts[tab.key as keyof typeof tabCounts] ?? 0
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className="cursor-pointer rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all"
+                style={{
+                  background: isActive ? '#2563eb' : '#fff',
+                  color: isActive ? '#fff' : '#475569',
+                  borderColor: isActive ? '#2563eb' : '#e2e8f0',
+                }}
+              >
+                {tab.label}{' '}
+                <span
+                  className="ml-0.5 inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-xs"
+                  style={{
+                    background: isActive ? 'rgba(255,255,255,0.2)' : '#f1f5f9',
+                    color: isActive ? '#fff' : '#64748b',
+                    minWidth: 20,
+                  }}
+                >
+                  {count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* 筛选区 */}
+        <TaskFilters
+          value={filters}
+          categories={categories}
+          people={people}
+          onChange={setFilters}
+          onReset={() => setFilters(emptyFilters)}
+        />
+
+        {/* 错误提示 */}
+        {error && (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        {/* 任务列表 */}
+        <div className="mt-5">
+          {loading ? (
+            <div
+              className="rounded-2xl border bg-white p-8 text-center text-sm text-gray-500"
+              style={{ borderColor: '#e5eaf3', boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)' }}
+            >
+              待办数据加载中...
+            </div>
+          ) : filteredTasks.length > 0 ? (
+            <div className="space-y-3">
+              {filteredTasks.map((item) => (
+                <TaskItemCard key={`${item.source}-${item.id}`} item={item} />
+              ))}
+            </div>
+          ) : (
+            <div
+              className="rounded-2xl border bg-white p-8 text-center text-sm text-gray-400"
+              style={{ borderColor: '#e5eaf3', boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)' }}
+            >
+              暂无待办事项
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

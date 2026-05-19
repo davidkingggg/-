@@ -196,32 +196,32 @@ export default function QuotesPage() {
     }
   }
 
-  const ic = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
-  const sc = 'border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20'
+  const ic = 'w-full h-10 border border-[#e5eaf3] rounded-xl px-3 text-[14px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400'
+  const sc = 'h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20'
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">报价管理</h1>
-          <p className="text-sm text-gray-500 mt-1">管理所有供应商报价单和报价明细</p>
+          <h1 className="text-[22px] font-bold text-[#0f172a]">报价管理</h1>
+          <p className="text-[13px] text-slate-400 mt-0.5">管理所有供应商报价单和报价明细</p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setImportModalOpen(true)}
-            className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+            className="h-9 px-3 border border-[#e5eaf3] bg-white text-[13px] text-[#475569] rounded-xl hover:bg-slate-50 transition-colors font-medium"
           >
             📥 CSV 导入
           </button>
           <button
             onClick={handleExport}
-            className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+            className="h-9 px-3 border border-[#e5eaf3] bg-white text-[13px] text-[#475569] rounded-xl hover:bg-slate-50 transition-colors font-medium"
           >
             📤 CSV 导出
           </button>
           <button
             onClick={() => router.push('/quotes/new')}
-            className="px-5 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+            className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm"
           >
             + 新增报价单
           </button>
@@ -229,7 +229,7 @@ export default function QuotesPage() {
       </div>
 
       {/* 筛选栏 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+      <div className="rounded-2xl bg-white border border-[#e5eaf3] p-4 mb-6" style={{ boxShadow: '0 6px 18px rgba(15, 23, 42, 0.04)' }}>
         <div className="flex gap-3 flex-wrap items-center">
           <input
             type="text"
@@ -274,7 +274,7 @@ export default function QuotesPage() {
       </div>
 
       {/* 列表 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="rounded-[20px] bg-white border border-[#e5eaf3] overflow-hidden" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
         {loading ? (
           <div className="text-center py-12 text-gray-400">加载中...</div>
         ) : quotes.length === 0 ? (
@@ -291,7 +291,7 @@ export default function QuotesPage() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
+              <tr className="bg-[#f8fafc] border-b border-[#e5eaf3]">
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">编号</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">名称</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-600">供应商</th>
@@ -329,13 +329,13 @@ export default function QuotesPage() {
                   <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
                     <button
                       onClick={() => router.push(`/quotes/${q.id}`)}
-                      className="text-blue-600 hover:text-blue-800 mr-3 text-xs font-medium"
+                      className="text-[13px] font-semibold text-[#2563eb] hover:text-blue-800 mr-4"
                     >
                       查看
                     </button>
                     <button
                       onClick={() => setArchiveTarget(q)}
-                      className="text-red-500 hover:text-red-700 text-xs font-medium"
+                      className="text-[13px] font-semibold text-[#ef4444] hover:text-red-700"
                     >
                       归档
                     </button>

@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/Toast'
+import TagInput from '@/components/ui/TagInput'
+import { COMMON_COMPANY_TYPES, COMMON_SOURCES } from '@/lib/workflow-constants'
 
 interface CategoryOption { id: string; name: string }
 interface SupplierOption { id: string; name: string }
@@ -39,6 +41,16 @@ export default function NewQuotePage() {
   const [categories, setCategories] = useState<CategoryOption[]>([])
   const [suppliers, setSuppliers] = useState<SupplierOption[]>([])
   const [saving, setSaving] = useState(false)
+
+  // 新供应商联创
+  const [newSupplierMode, setNewSupplierMode] = useState(false)
+  const [newSupplier, setNewSupplier] = useState({
+    name: '',
+    categoryId: '',
+    region: '',
+    companyType: '',
+    source: '',
+  })
 
   const [form, setForm] = useState({
     quoteNumber: '',
@@ -77,17 +89,48 @@ export default function NewQuotePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.supplierId) { showToast('请选择供应商', 'error'); return }
     if (!form.categoryId) { showToast('请选择品类', 'error'); return }
     if (!form.quoteDate) { showToast('请填写报价日期', 'error'); return }
+
+    // 新供应商模式：校验必填项
+    if (newSupplierMode) {
+      if (!newSupplier.name.trim()) { showToast('请填写新供应商名称', 'error'); return }
+      if (!newSupplier.categoryId) { showToast('请选择新供应商的主品类', 'error'); return }
+    } else {
+      if (!form.supplierId) { showToast('请选择供应商', 'error'); return }
+    }
 
     const validItems = items.filter(i => i.productName.trim())
     if (validItems.length === 0) { showToast('请至少添加一条报价明细', 'error'); return }
 
     setSaving(true)
     try {
+      let supplierId = form.supplierId
+
+      // 新供应商模式：先创建供应商
+      if (newSupplierMode) {
+        const supRes = await fetch('/api/suppliers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: newSupplier.name.trim(),
+            categoryId: newSupplier.categoryId,
+            region: newSupplier.region || null,
+            companyType: newSupplier.companyType || null,
+            source: newSupplier.source || null,
+          }),
+        })
+        if (!supRes.ok) {
+          const supErr = await supRes.json()
+          throw new Error(supErr.error || '创建供应商失败')
+        }
+        const created = await supRes.json()
+        supplierId = created.id
+      }
+
       const payload = {
         ...form,
+        supplierId,
         quoteNumber: form.quoteNumber || null,
         title: form.title || null,
         sourceType: form.sourceType || null,
@@ -120,9 +163,10 @@ export default function NewQuotePage() {
     }
   }
 
-  const ic = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all'
-  const sc = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20'
-  const lc = 'block text-sm font-medium text-gray-700 mb-1'
+  const ic = 'w-full h-10 border border-[#e5eaf3] rounded-xl px-3 text-[14px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all'
+  const sc = 'h-10 border border-[#e5eaf3] rounded-xl px-3 text-[14px] bg-white text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20'
+  const lc = 'block text-[13px] font-semibold text-[#334155] mb-1.5'
+  const tc = 'w-full border border-[#e5eaf3] rounded-xl px-3 py-2 text-[14px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400'
 
   return (
     <div className="p-6 max-w-5xl">
@@ -130,12 +174,12 @@ export default function NewQuotePage() {
         <button onClick={() => router.push('/quotes')} className="text-sm text-gray-500 hover:text-gray-700 transition-colors mb-2 inline-block">
           ← 返回报价列表
         </button>
-        <h1 className="text-2xl font-bold text-gray-800">新增报价单</h1>
+        <h1 className="text-[22px] font-bold text-[#0f172a]">新增报价单</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* 报价单主信息 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-6" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
           <h2 className="text-lg font-semibold text-gray-800 mb-4">报价单信息</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -148,10 +192,34 @@ export default function NewQuotePage() {
             </div>
             <div>
               <label className={lc}>供应商 <span className="text-red-500">*</span></label>
-              <select value={form.supplierId} onChange={e => setForm({...form, supplierId: e.target.value})} className={sc} required>
-                <option value="">请选择供应商</option>
-                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+              {!newSupplierMode ? (
+                <div className="space-y-1.5">
+                  <select value={form.supplierId} onChange={e => setForm({...form, supplierId: e.target.value})} className={sc}>
+                    <option value="">请选择供应商</option>
+                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                  <button type="button" onClick={() => setNewSupplierMode(true)} className="text-xs text-blue-600 hover:text-blue-800">
+                    + 创建新供应商
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50/30 p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-blue-700">快速创建供应商</span>
+                    <button type="button" onClick={() => { setNewSupplierMode(false); setNewSupplier({ name: '', categoryId: '', region: '', companyType: '', source: '' }) }} className="text-xs text-gray-400 hover:text-gray-600">
+                      × 取消
+                    </button>
+                  </div>
+                  <input type="text" value={newSupplier.name} onChange={e => setNewSupplier({...newSupplier, name: e.target.value})} className={ic} placeholder="供应商名称 *" />
+                  <select value={newSupplier.categoryId} onChange={e => setNewSupplier({...newSupplier, categoryId: e.target.value})} className={sc}>
+                    <option value="">主品类 *</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <input type="text" value={newSupplier.region} onChange={e => setNewSupplier({...newSupplier, region: e.target.value})} className={ic} placeholder="所在地区（选填）" />
+                  <TagInput value={newSupplier.companyType} onChange={v => setNewSupplier({...newSupplier, companyType: v})} suggestions={COMMON_COMPANY_TYPES} placeholder="公司性质（选填）" />
+                  <TagInput value={newSupplier.source} onChange={v => setNewSupplier({...newSupplier, source: v})} suggestions={COMMON_SOURCES} placeholder="来源（选填）" />
+                </div>
+              )}
             </div>
             <div>
               <label className={lc}>品类 <span className="text-red-500">*</span></label>
@@ -185,19 +253,19 @@ export default function NewQuotePage() {
           </div>
           <div className="mt-4">
             <label className={lc}>原始报价说明</label>
-            <textarea value={form.rawText} onChange={e => setForm({...form, rawText: e.target.value})} rows={2} className={ic} placeholder="补充文字说明" />
+            <textarea value={form.rawText} onChange={e => setForm({...form, rawText: e.target.value})} rows={2} className={tc} placeholder="补充文字说明" />
           </div>
           <div className="mt-4">
             <label className={lc}>备注</label>
-            <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} rows={2} className={ic} />
+            <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} rows={2} className={tc} />
           </div>
         </div>
 
         {/* 报价明细 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-6" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-800">报价明细</h2>
-            <button type="button" onClick={addItem} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+            <button type="button" onClick={addItem} className="text-[13px] font-semibold text-[#2563eb] hover:text-blue-800">
               + 添加明细
             </button>
           </div>
@@ -207,7 +275,7 @@ export default function NewQuotePage() {
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-gray-600">明细 {i + 1}</span>
                   {items.length > 1 && (
-                    <button type="button" onClick={() => removeItem(i)} className="text-xs text-red-500 hover:text-red-700">
+                    <button type="button" onClick={() => removeItem(i)} className="text-[13px] font-semibold text-[#ef4444] hover:text-red-700">
                       移除
                     </button>
                   )}
@@ -276,12 +344,12 @@ export default function NewQuotePage() {
         {/* 提交 */}
         <div className="flex justify-end gap-3">
           <button type="button" onClick={() => router.push('/quotes')}
-            className="px-5 py-2.5 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium"
           >
             取消
           </button>
           <button type="submit" disabled={saving}
-            className="px-6 py-2.5 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium shadow-sm"
+            className="h-10 px-6 text-[13px] text-white bg-[#2563eb] rounded-xl hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50"
           >
             {saving ? '保存中...' : '保存报价单'}
           </button>

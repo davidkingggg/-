@@ -18,126 +18,250 @@ function formatGeneratedAt(value: string) {
   return date.toLocaleString('zh-CN')
 }
 
-function EmptyState({ text }: { text: string }) {
-  return <div className="rounded-lg border border-dashed border-gray-200 py-8 text-center text-sm text-gray-400">{text}</div>
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 6) return '夜深了'
+  if (h < 12) return '早上好'
+  if (h < 14) return '中午好'
+  if (h < 18) return '下午好'
+  return '晚上好'
 }
 
-function TaskList({ items, emptyText }: { items: TaskItem[]; emptyText: string }) {
-  if (items.length === 0) return <EmptyState text={emptyText} />
-
+function TaskItemRow({ item }: { item: TaskItem }) {
   return (
-    <div className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-white">
-      {items.map((item) => (
-        <Link key={`${item.source}-${item.id}`} href={item.href} className="block p-4 transition-colors hover:bg-gray-50">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">{item.sourceLabel}</span>
-                {item.priority ? <span className="rounded bg-amber-50 px-2 py-0.5 text-xs text-amber-700">{item.priority}</span> : null}
-                {item.isOverdue ? <span className="rounded bg-red-50 px-2 py-0.5 text-xs text-red-700">已超期</span> : null}
-              </div>
-              <div className="mt-2 break-words font-medium text-gray-900">{item.title}</div>
-              <div className="mt-1 break-words text-sm text-gray-500">
-                {[item.categoryName, item.ownerName ? `负责人：${item.ownerName}` : '', item.nextAction].filter(Boolean).join(' / ') || '暂无补充'}
-              </div>
-            </div>
-            <div className="shrink-0 text-right text-xs text-gray-500">
-              <div>{formatDate(item.dueDate)}</div>
-              <div className="mt-1">{item.status}</div>
-            </div>
-          </div>
-        </Link>
-      ))}
-    </div>
+    <Link
+      key={`${item.source}-${item.id}`}
+      href={item.href}
+      className="group flex items-start gap-3 py-3.5 border-b border-[#eef2f7] last:border-b-0 transition-colors hover:bg-blue-50/30 -mx-1 px-1 rounded-lg"
+    >
+      <div className="mt-1 shrink-0">
+        {item.isOverdue ? (
+          <span className="inline-block w-2 h-2 rounded-full bg-red-400" />
+        ) : item.priority === '高' ? (
+          <span className="inline-block w-2 h-2 rounded-full bg-amber-400" />
+        ) : (
+          <span className="inline-block w-2 h-2 rounded-full bg-slate-300" />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">{item.sourceLabel}</span>
+          {item.priority === '高' && <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-600">高</span>}
+          {item.isOverdue && <span className="rounded bg-red-50 text-red-500 px-1.5 py-0.5 text-[10px] font-medium border border-red-200">超期</span>}
+        </div>
+        <div className="text-[13px] font-medium text-gray-800 group-hover:text-blue-700 transition-colors truncate">{item.title}</div>
+        <div className="mt-0.5 text-[11px] text-gray-400 truncate">
+          {[item.categoryName, item.ownerName, item.nextAction].filter(Boolean).join(' · ')}
+        </div>
+      </div>
+      <div className="shrink-0 text-right pt-0.5">
+        <div className="text-[11px] text-gray-400">{formatDate(item.dueDate)}</div>
+      </div>
+    </Link>
   )
 }
 
-function SectionHeader({ title, subtitle }: { title: string; subtitle: string }) {
+function TodoSection({ title, color, items, emptyText }: { title: string; color: string; items: TaskItem[]; emptyText: string }) {
+  if (items.length === 0) {
+    return (
+      <div className="py-2">
+        <div className="flex items-center gap-2 mb-1">
+          <span className={`inline-block w-1.5 h-3 rounded-full ${color}`} />
+          <span className="text-[13px] font-semibold text-gray-700">{title}</span>
+          <span className="text-[11px] text-gray-400">0 项</span>
+        </div>
+        <p className="text-[12px] text-gray-300 pl-4">{emptyText}</p>
+      </div>
+    )
+  }
   return (
-    <div className="mb-3">
-      <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-      <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
+    <div>
+      <div className="flex items-center gap-2 mb-1">
+        <span className={`inline-block w-1.5 h-3 rounded-full ${color}`} />
+        <span className="text-[13px] font-semibold text-gray-700">{title}</span>
+        <span className="text-[11px] text-gray-400">{items.length} 项</span>
+      </div>
+      <div>
+        {items.map((item) => <TaskItemRow key={`${item.source}-${item.id}`} item={item} />)}
+      </div>
     </div>
   )
 }
 
 export default async function Home() {
   const data = await buildDashboardData()
+  const greeting = getGreeting()
+
+  const alertCount = data.summary.overdueTodoCount + data.summary.bossDecisionCount + data.mainline.purchaseIssueCount
+
+  const allTodoItems = [
+    ...data.todos.overdueItems,
+    ...data.todos.weekItems,
+    ...data.todos.bossDecisionItems,
+    ...data.mainline.purchaseIssueItems,
+    ...data.admin.items,
+  ]
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">首页仪表盘</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            汇总供应链主线工作与行政事项；综合待办包含行政事项，主线风险区只展示开发和采购流程。
-          </p>
+    <div className="space-y-5">
+      {/* Hero Card - 128px */}
+      <div
+        className="relative overflow-hidden rounded-[20px] text-white"
+        style={{
+          height: '128px',
+          background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 48%, #06b6d4 100%)',
+          boxShadow: '0 18px 40px rgba(37, 99, 235, 0.22)',
+          padding: '28px 32px',
+        }}
+      >
+        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 30%, white 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
+        <div className="relative flex items-center justify-between h-full">
+          <div>
+            <div className="text-[14px] text-blue-100 mb-1">{greeting}，演示用户</div>
+            <h1 className="text-[24px] font-bold">今日采购工作台概览</h1>
+            <div className="mt-2.5 flex items-center gap-4 text-[14px] text-blue-100/90">
+              <span>供应商 {data.summary.supplierCount} 家</span>
+              <span className="w-px h-3 bg-blue-300/30" />
+              <span>采购进行中 {data.mainline.purchaseInProgressCount} 项</span>
+              <span className="w-px h-3 bg-blue-300/30" />
+              <span>超期待办 {data.summary.overdueTodoCount} 项</span>
+            </div>
+          </div>
+          <div className="text-right flex flex-col items-end justify-center">
+            {alertCount > 0 ? (
+              <div className="inline-flex items-center gap-2 rounded-xl bg-red-500/90 backdrop-blur-sm px-4 py-2 text-[14px] font-medium">
+                <span className="inline-block w-2 h-2 rounded-full bg-white animate-pulse" />
+                <span>有 {alertCount} 项需要关注</span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-2 rounded-xl bg-white/15 backdrop-blur-sm px-4 py-2 text-[14px]">
+                <span className="text-emerald-300">✓</span>
+                <span>暂无紧急事项</span>
+              </div>
+            )}
+            <div className="mt-2 text-[11px] text-blue-200/50">
+              更新于 {formatGeneratedAt(data.generatedAt)}
+            </div>
+          </div>
         </div>
-        <div className="text-sm text-gray-400">更新时间：{formatGeneratedAt(data.generatedAt)}</div>
       </div>
 
+      {/* KPI: Core Overview */}
       <section>
-        <SectionHeader title="核心概览" subtitle="推荐/备选供应商数仅统计未归档且等级为 A优先推荐或 B备选的供应商。" />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <DashboardCard label="供应商总数" value={data.summary.supplierCount} tone="blue" description="未归档供应商" />
-          <DashboardCard label="推荐/备选供应商数" value={data.summary.recommendedSupplierCount} tone="emerald" description="未归档，且推荐等级为 A优先推荐或 B备选" />
-          <DashboardCard label="品类总数" value={data.summary.categoryCount} tone="violet" description="未归档品类" />
-          <DashboardCard label="报价单数量" value={data.summary.quoteSheetCount} tone="amber" description="未归档报价单" />
-          <DashboardCard label="销售/商务资料数量" value={data.summary.salesMaterialCount} tone="slate" description="未归档销售资料" />
-          <DashboardCard label="综合本周待办" value={data.summary.weekTodoCount} tone="blue" description="与待办中心一致，包含行政事项" />
-          <DashboardCard label="综合超期待办" value={data.summary.overdueTodoCount} tone="red" description="与待办中心一致，包含行政事项" />
-          <DashboardCard label="需老板决策事项数" value={data.summary.bossDecisionCount} tone="amber" description="与待办中心一致" />
+        <div className="flex items-center gap-2 mb-3">
+          <span className="inline-block w-1 h-4 rounded-full bg-blue-500" />
+          <h2 className="text-[15px] font-bold text-[#0f172a]">核心概览</h2>
+          <span className="text-[11px] text-slate-400">推荐/备选仅统计 A优先推荐 或 B备选</span>
+        </div>
+        <div className="grid grid-cols-4 gap-4">
+          <DashboardCard label="供应商总数" value={data.summary.supplierCount} tone="blue" icon="&#9670;" />
+          <DashboardCard label="推荐/备选供应商" value={data.summary.recommendedSupplierCount} tone="emerald" icon="&#9733;" />
+          <DashboardCard label="品类总数" value={data.summary.categoryCount} tone="violet" icon="&#9830;" />
+          <DashboardCard label="报价单数量" value={data.summary.quoteSheetCount} tone="amber" icon="&#9998;" />
         </div>
       </section>
 
+      {/* KPI: Risk & Reminders */}
       <section>
-        <SectionHeader title="平台主线工作" subtitle="供应商开发与采购执行的主线看板；行政事项不会进入这里的风险统计。" />
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
-          <DashboardCard label="供应商开发进行中" value={data.mainline.developmentInProgressCount} tone="blue" />
-          <DashboardCard label="采购执行进行中" value={data.mainline.purchaseInProgressCount} tone="emerald" />
-          <DashboardCard label="采购异常/暂停" value={data.mainline.purchaseIssueCount} tone="red" />
-          <DashboardCard label="本周主线待办" value={data.mainline.weekCount} tone="amber" />
-          <DashboardCard label="主线超期待办" value={data.mainline.overdueCount} tone="red" />
+        <div className="grid grid-cols-4 gap-4">
+          <DashboardCard label="综合超期待办" value={data.summary.overdueTodoCount} tone="red" icon="&#9888;" />
+          <DashboardCard label="需老板决策" value={data.summary.bossDecisionCount} tone="amber" icon="&#9889;" />
+          <DashboardCard label="综合本周待办" value={data.summary.weekTodoCount} tone="blue" icon="&#9200;" />
+          <DashboardCard label="销售/商务资料" value={data.summary.salesMaterialCount} tone="slate" icon="&#9997;" />
         </div>
       </section>
 
-      <section>
-        <SectionHeader title="行政事项" subtitle="会议、周报、接待、办公采购等行政工作单独展示；综合待办数字会包含这些事项。" />
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <DashboardCard label="行政待办" value={data.admin.openCount} tone="slate" />
-          <DashboardCard label="本周行政事项" value={data.admin.weekCount} tone="blue" />
-          <DashboardCard label="超期行政事项" value={data.admin.overdueCount} tone="red" />
-        </div>
-        <div className="mt-4">
-          <TaskList items={data.admin.items} emptyText="当前暂无行政事项" />
-        </div>
-      </section>
+      {/* Bottom: Mainline (70%) + Todo Panel (30%) */}
+      <div className="grid grid-cols-10 gap-5">
+        {/* Left: Platform Mainline + Admin */}
+        <div className="col-span-7 space-y-5">
+          {/* Platform Mainline */}
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="inline-block w-1 h-4 rounded-full bg-emerald-500" />
+              <h2 className="text-[15px] font-bold text-[#0f172a]">平台主线工作</h2>
+              <span className="text-[11px] text-slate-400">供应商开发与采购执行</span>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <DashboardCard label="开发进行中" value={data.mainline.developmentInProgressCount} tone="blue" compact />
+              <DashboardCard label="采购进行中" value={data.mainline.purchaseInProgressCount} tone="emerald" compact />
+              <DashboardCard label="采购异常/暂停" value={data.mainline.purchaseIssueCount} tone="red" compact />
+              <DashboardCard label="本周主线待办" value={data.mainline.weekCount} tone="amber" compact />
+              <DashboardCard label="主线超期待办" value={data.mainline.overdueCount} tone="red" compact />
+              <DashboardCard label="需老板决策" value={data.mainline.bossDecisionCount} tone="amber" compact />
+            </div>
+          </section>
 
-      <section>
-        <SectionHeader title="近期重点事项" subtitle="本周和超期待办为综合口径，可能包含行政事项；采购异常/暂停单独展示，避免误作为行政工作。" />
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <div>
-            <SectionHeader title="本周待办摘要" subtitle="与待办中心一致，包含平台主线和行政事项。" />
-            <TaskList items={data.todos.weekItems} emptyText="本周暂无待办" />
-          </div>
-          <div>
-            <SectionHeader title="超期待办摘要" subtitle="与待办中心一致；行政事项会明确显示为行政事项。" />
-            <TaskList items={data.todos.overdueItems} emptyText="当前暂无超期待办" />
-          </div>
-          <div>
-            <SectionHeader title="需老板决策事项摘要" subtitle="来自开发与采购流程，口径与待办中心保持一致。" />
-            <TaskList items={data.todos.bossDecisionItems} emptyText="当前暂无需老板决策事项" />
-          </div>
-          <div>
-            <SectionHeader title="采购异常/暂停摘要" subtitle="仅采购执行流程状态为异常或暂停的事项。" />
-            <TaskList items={data.mainline.purchaseIssueItems} emptyText="当前暂无采购异常/暂停事项" />
-          </div>
-          <div>
-            <SectionHeader title="行政事项摘要" subtitle="行政事项独立展示，不计入供应链主线风险。" />
-            <TaskList items={data.admin.items} emptyText="当前暂无行政事项" />
+          {/* Admin */}
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="inline-block w-1 h-4 rounded-full bg-slate-400" />
+              <h2 className="text-[15px] font-bold text-[#0f172a]">行政事项</h2>
+              <span className="text-[11px] text-slate-400">会议、周报、接待等</span>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <DashboardCard label="行政待办" value={data.admin.openCount} tone="slate" compact />
+              <DashboardCard label="本周行政事项" value={data.admin.weekCount} tone="blue" compact />
+              <DashboardCard label="超期行政事项" value={data.admin.overdueCount} tone="red" compact />
+            </div>
+          </section>
+        </div>
+
+        {/* Right: Unified Todo Panel */}
+        <div className="col-span-3">
+          <div
+            className="rounded-[20px] bg-white border border-[#e5eaf3] overflow-hidden"
+            style={{ boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)' }}
+          >
+            <div className="px-5 pt-5 pb-3 border-b border-[#eef2f7]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">⏱</span>
+                  <h2 className="text-[15px] font-bold text-[#0f172a]">近期重点事项</h2>
+                </div>
+                <span className="text-[11px] text-slate-400">{allTodoItems.length} 项</span>
+              </div>
+            </div>
+            <div className="px-5 py-2 space-y-1">
+              <TodoSection
+                title="超期待办"
+                color="bg-red-400"
+                items={data.todos.overdueItems}
+                emptyText="暂无超期待办"
+              />
+              <TodoSection
+                title="本周待办"
+                color="bg-amber-400"
+                items={data.todos.weekItems}
+                emptyText="暂无本周待办"
+              />
+              <TodoSection
+                title="需老板决策"
+                color="bg-blue-400"
+                items={data.todos.bossDecisionItems}
+                emptyText="暂无需老板决策事项"
+              />
+              <TodoSection
+                title="采购异常/暂停"
+                color="bg-orange-400"
+                items={data.mainline.purchaseIssueItems}
+                emptyText="暂无异常事项"
+              />
+              <TodoSection
+                title="行政事项"
+                color="bg-slate-400"
+                items={data.admin.items}
+                emptyText="暂无行政事项"
+              />
+            </div>
+            <div className="px-5 py-3 border-t border-[#eef2f7]">
+              <Link href="/tasks" className="text-[12px] text-blue-600 hover:text-blue-700 font-medium">
+                查看全部待办 →
+              </Link>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
     </div>
   )
 }

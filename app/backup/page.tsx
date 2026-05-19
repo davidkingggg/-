@@ -147,8 +147,8 @@ export default function BackupPage() {
   if (loading) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold text-gray-800">本地备份与恢复</h1>
-        <div className="mt-6 text-sm text-gray-500">正在加载备份信息...</div>
+        <h1 className="text-[22px] font-bold text-[#0f172a]">本地备份与恢复</h1>
+        <div className="mt-6 text-[13px] text-slate-400">正在加载备份信息...</div>
       </div>
     )
   }
@@ -157,15 +157,15 @@ export default function BackupPage() {
     <div className="p-6 space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">本地备份与恢复</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-[22px] font-bold text-[#0f172a]">本地备份与恢复</h1>
+          <p className="text-[13px] text-slate-400 mt-0.5">
             仅用于本机 SQLite 数据库文件的手动备份和受控恢复。
           </p>
         </div>
         <button
           onClick={handleCreateBackup}
           disabled={creating || !data?.database.exists}
-          className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium shadow-sm"
+          className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors text-[13px] font-semibold shadow-sm"
         >
           {creating ? '创建中...' : '创建备份'}
         </button>
@@ -195,12 +195,12 @@ export default function BackupPage() {
         </div>
       </section>
 
-      <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <section className="rounded-[20px] bg-white border border-[#e5eaf3] overflow-hidden p-5" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
         <div className="flex items-center justify-between gap-4 mb-4">
           <h2 className="text-lg font-semibold text-gray-800">当前数据库状态</h2>
           <button
             onClick={loadBackups}
-            className="px-3 py-1.5 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            className="h-8 px-3 text-[12px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium"
           >
             刷新
           </button>
@@ -237,8 +237,8 @@ export default function BackupPage() {
         )}
       </section>
 
-      <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
+      <section className="rounded-[20px] bg-white border border-[#e5eaf3] overflow-hidden" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
+        <div className="px-5 py-4 border-b border-[#e5eaf3]">
           <h2 className="text-lg font-semibold text-gray-800">备份列表</h2>
           <p className="mt-1 text-sm text-gray-500">
             仅显示符合系统命名规则的 `.sqlite` 文件。普通备份用于手动留存当前数据库，恢复前安全备份用于恢复操作前的回退保护。
@@ -247,32 +247,32 @@ export default function BackupPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">文件名</th>
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">类型</th>
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">用途说明</th>
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">大小</th>
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">创建时间</th>
-                <th className="text-left px-5 py-3 font-semibold text-gray-600">修改时间</th>
-                <th className="text-right px-5 py-3 font-semibold text-gray-600">操作</th>
+              <tr className="bg-[#f8fafc] border-b border-[#e5eaf3]">
+                <th className="text-left px-5 h-[52px] text-[13px] font-bold text-[#475569]">文件名</th>
+                <th className="text-left px-5 h-[52px] text-[13px] font-bold text-[#475569]">类型</th>
+                <th className="text-left px-5 h-[52px] text-[13px] font-bold text-[#475569]">用途说明</th>
+                <th className="text-left px-5 h-[52px] text-[13px] font-bold text-[#475569]">大小</th>
+                <th className="text-left px-5 h-[52px] text-[13px] font-bold text-[#475569]">创建时间</th>
+                <th className="text-left px-5 h-[52px] text-[13px] font-bold text-[#475569]">修改时间</th>
+                <th className="text-right px-5 h-[52px] text-[13px] font-bold text-[#475569]">操作</th>
               </tr>
             </thead>
             <tbody>
               {data?.backups.map((backup) => (
-                <tr key={backup.fileName} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
-                  <td className="px-5 py-4 font-mono text-xs text-gray-700">{backup.fileName}</td>
-                  <td className="px-5 py-4 text-gray-700">{typeLabel(backup.type)}</td>
-                  <td className="px-5 py-4 text-gray-600">{typeDescription(backup.type)}</td>
-                  <td className="px-5 py-4 text-gray-700">{formatBytes(backup.size)}</td>
-                  <td className="px-5 py-4 text-gray-700">{formatDate(backup.createdAt)}</td>
-                  <td className="px-5 py-4 text-gray-700">{formatDate(backup.updatedAt)}</td>
-                  <td className="px-5 py-4 text-right">
+                <tr key={backup.fileName} className="border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#f8fafc] transition-colors">
+                  <td className="px-5 h-[58px] text-[14px] font-mono text-xs text-gray-700">{backup.fileName}</td>
+                  <td className="px-5 h-[58px] text-[14px] text-gray-700">{typeLabel(backup.type)}</td>
+                  <td className="px-5 h-[58px] text-[14px] text-gray-600">{typeDescription(backup.type)}</td>
+                  <td className="px-5 h-[58px] text-[14px] text-gray-700">{formatBytes(backup.size)}</td>
+                  <td className="px-5 h-[58px] text-[14px] text-gray-700">{formatDate(backup.createdAt)}</td>
+                  <td className="px-5 h-[58px] text-[14px] text-gray-700">{formatDate(backup.updatedAt)}</td>
+                  <td className="px-5 h-[58px] text-[14px] text-right">
                     <button
                       onClick={() => {
                         setRestoreTarget(backup)
                         setConfirmText('')
                       }}
-                      className="px-3 py-1.5 text-sm text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                      className="h-8 px-3 text-[12px] text-red-600 font-semibold hover:text-red-700 transition-colors"
                     >
                       恢复
                     </button>
@@ -307,7 +307,7 @@ export default function BackupPage() {
               <input
                 value={confirmText}
                 onChange={(event) => setConfirmText(event.target.value)}
-                className="mt-2 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                className="mt-2 w-full h-10 border border-[#e5eaf3] rounded-xl px-3 text-[14px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400"
                 placeholder={CONFIRM_TEXT}
               />
             </label>
@@ -315,14 +315,14 @@ export default function BackupPage() {
               <button
                 onClick={() => setRestoreTarget(null)}
                 disabled={restoring}
-                className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 disabled:opacity-50 transition-colors font-medium"
               >
                 取消
               </button>
               <button
                 onClick={handleRestore}
                 disabled={restoring || confirmText !== CONFIRM_TEXT}
-                className="px-4 py-2 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="h-10 px-6 text-[13px] text-white bg-red-600 rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
               >
                 {restoring ? '恢复中...' : '确认恢复'}
               </button>

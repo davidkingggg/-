@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/Toast'
 import { PURCHASE_STAGES, PURCHASE_STATUSES, PRIORITIES } from '@/lib/workflow-constants'
 import PurchaseProcessForm from '@/components/workflow/PurchaseProcessForm'
 import { useWorkflowLookups } from '@/components/workflow/useWorkflowLookups'
+import { buildCSVContent, buildErrorReportRows } from '@/lib/csv-utils'
 
 interface ProcessItem {
   id: string;
@@ -22,6 +23,7 @@ interface ProcessItem {
   nextAction: string | null;
   needBossDecision: boolean;
   purchaseAmount: number | null;
+  companyName?: string | null;
   supplier: { id: string; name: string };
   category: { id: string; name: string };
   owner: { id: string; name: string };
@@ -29,14 +31,42 @@ interface ProcessItem {
   salesPerson?: { id: string; name: string };
 }
 
+interface ImportErrorItem {
+  row: number
+  field: string
+  value?: string
+  reason: string
+  suggestion?: string
+}
+
 function PurchaseBoardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { showToast } = useToast()
-  const { people } = useWorkflowLookups()
+  const { categories, people } = useWorkflowLookups()
 
   const [items, setItems] = useState<ProcessItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
+  const [collapsedStages, setCollapsedStages] = useState<Set<string>>(new Set(PURCHASE_STAGES))
+
+  const toggleCard = (id: string) => {
+    setExpandedCards(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleStage = (stage: string) => {
+    setCollapsedStages(prev => {
+      const next = new Set(prev)
+      if (next.has(stage)) next.delete(stage)
+      else next.add(stage)
+      return next
+    })
+  }
 
   // Filters
   const [filterOwnerId, setFilterOwnerId] = useState(searchParams.get('ownerId') || '')
@@ -49,6 +79,18 @@ function PurchaseBoardContent() {
   const [formOpen, setFormOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<ProcessItem | null>(null)
   const [archiveItem, setArchiveItem] = useState<ProcessItem | null>(null)
+  const [importModalOpen, setImportModalOpen] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importErrors, setImportErrors] = useState<ImportErrorItem[]>([])
+  const [importResult, setImportResult] = useState('')
+
+  // Import form state
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [defaultCategoryId, setDefaultCategoryId] = useState('')
+  const [defaultOwnerId, setDefaultOwnerId] = useState('')
+  const [defaultRequesterId, setDefaultRequesterId] = useState('')
+  const [defaultSalesPersonId, setDefaultSalesPersonId] = useState('')
+  const [defaultPriority, setDefaultPriority] = useState('中')
 
   const initialSupplierId = searchParams.get('supplierId') || ''
   const initialCategoryId = searchParams.get('categoryId') || ''
@@ -117,6 +159,88 @@ function PurchaseBoardContent() {
     }
   }
 
+  const handleImport = async () => {
+    if (!importFile) return
+    if (!defaultOwnerId) {
+      showToast('请选择默认负责人', 'error')
+      return
+    }
+
+    setImporting(true)
+    setImportErrors([])
+    setImportResult('')
+    try {
+      // 以 ArrayBuffer 方式读取文件，保留原始字节
+      const buffer = await importFile.arrayBuffer()
+      const uint8Array = new Uint8Array(buffer)
+
+      // 检测是否需要 GBK 解码：如果 UTF-8 解码后中文很少，尝试 GBK
+      const utf8Text = new TextDecoder('utf-8').decode(uint8Array)
+      const utf8ChineseCount = (utf8Text.match(/[一-龥]/g) ?? []).length
+
+      let csvText: string
+      if (utf8ChineseCount > 10) {
+        // UTF-8 解码正常
+        csvText = utf8Text
+      } else {
+        // 尝试 GBK 解码
+        try {
+          const gbkDecoder = new TextDecoder('gbk')
+          csvText = gbkDecoder.decode(uint8Array)
+        } catch {
+          csvText = utf8Text
+        }
+      }
+      const res = await fetch('/api/purchase-processes/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          csvText,
+          defaultCategoryId,
+          defaultOwnerId,
+          defaultRequesterId,
+          defaultSalesPersonId: defaultSalesPersonId || undefined,
+          defaultPriority,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok || data.success === false) {
+        if (data.errors && data.errors.length > 0) {
+          setImportErrors(data.errors)
+          setImportResult(data.message || '导入失败')
+          showToast(data.message || `导入失败：${data.errors.length} 条错误`, 'error')
+        } else {
+          showToast(data.error || data.message || '导入失败', 'error')
+        }
+        return
+      }
+
+      showToast(data.message, 'success')
+      setImportModalOpen(false)
+      setImportFile(null)
+      setImportResult('')
+      setImportErrors([])
+      loadItems()
+    } catch {
+      showToast('导入请求失败', 'error')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  function downloadImportErrorCSV() {
+    const csv = buildCSVContent(buildErrorReportRows(importErrors))
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'purchase_import_errors.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const groupedItems = PURCHASE_STAGES.reduce((acc, stage) => {
     acc[stage] = items.filter(item => item.currentStage === stage)
     return acc
@@ -124,51 +248,57 @@ function PurchaseBoardContent() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex justify-between items-center mb-6 shrink-0">
+      <div className="flex items-center gap-4 mb-6 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">采购执行看板</h1>
-          <p className="text-sm text-gray-500 mt-1">跟踪日常采购事项进度</p>
+          <h1 className="text-[22px] font-bold text-[#0f172a]">采购执行看板</h1>
+          <p className="text-[13px] text-slate-400 mt-0.5">跟踪日常采购事项进度</p>
         </div>
         <button
           onClick={() => { setEditingItem(null); setFormOpen(true); }}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+          className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm"
         >
           + 新增采购事项
         </button>
+        <button
+          onClick={() => setImportModalOpen(true)}
+          className="h-9 px-5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors text-[13px] font-semibold"
+        >
+          导入审批 CSV
+        </button>
       </div>
 
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 shrink-0 flex flex-wrap gap-4">
+      <div className="rounded-2xl bg-white border border-[#e5eaf3] p-4 mb-6 shrink-0 flex flex-wrap gap-4" style={{ boxShadow: '0 6px 18px rgba(15, 23, 42, 0.04)' }}>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">负责人</label>
-          <select className="border border-gray-200 rounded px-2 py-1 text-sm min-w-32" value={filterOwnerId} onChange={e => setFilterOwnerId(e.target.value)}>
+          <label className="block text-[12px] text-slate-400 font-medium mb-1.5">负责人</label>
+          <select className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20" value={filterOwnerId} onChange={e => setFilterOwnerId(e.target.value)}>
             <option value="">全部</option>
             {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">需求提交人</label>
-          <select className="border border-gray-200 rounded px-2 py-1 text-sm min-w-32" value={filterRequesterId} onChange={e => setFilterRequesterId(e.target.value)}>
+          <label className="block text-[12px] text-slate-400 font-medium mb-1.5">需求提交人</label>
+          <select className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20" value={filterRequesterId} onChange={e => setFilterRequesterId(e.target.value)}>
             <option value="">全部</option>
             {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">销售配合</label>
-          <select className="border border-gray-200 rounded px-2 py-1 text-sm min-w-32" value={filterSalesPersonId} onChange={e => setFilterSalesPersonId(e.target.value)}>
+          <label className="block text-[12px] text-slate-400 font-medium mb-1.5">销售配合</label>
+          <select className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20" value={filterSalesPersonId} onChange={e => setFilterSalesPersonId(e.target.value)}>
             <option value="">全部</option>
             {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">状态</label>
-          <select className="border border-gray-200 rounded px-2 py-1 text-sm min-w-32" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+          <label className="block text-[12px] text-slate-400 font-medium mb-1.5">状态</label>
+          <select className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
             <option value="">全部</option>
             {PURCHASE_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">优先级</label>
-          <select className="border border-gray-200 rounded px-2 py-1 text-sm min-w-32" value={filterPriority} onChange={e => setFilterPriority(e.target.value)}>
+          <label className="block text-[12px] text-slate-400 font-medium mb-1.5">优先级</label>
+          <select className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20" value={filterPriority} onChange={e => setFilterPriority(e.target.value)}>
             <option value="">全部</option>
             {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
@@ -177,55 +307,92 @@ function PurchaseBoardContent() {
 
       {/* Kanban Board */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4">
-        <div className="flex gap-4 h-full items-start" style={{ width: 'max-content' }}>
-          {PURCHASE_STAGES.map(stage => (
-            <div key={stage} className="w-80 bg-gray-100/50 rounded-xl flex flex-col h-full max-h-full border border-gray-200 shrink-0">
-              <div className="p-3 border-b border-gray-200 bg-gray-100 rounded-t-xl flex justify-between items-center shrink-0">
-                <h3 className="font-semibold text-gray-700">{stage}</h3>
+        <div className="flex gap-2 h-full items-start" style={{ width: 'max-content' }}>
+          {PURCHASE_STAGES.map(stage => {
+            const isStageCollapsed = collapsedStages.has(stage)
+            if (isStageCollapsed) {
+              return (
+                <div
+                  key={stage}
+                  className="bg-gray-100/50 rounded-lg border border-gray-200 shrink-0 cursor-pointer hover:bg-gray-200/60 transition-colors flex flex-col items-center py-4 px-2 h-full max-h-full justify-center gap-2"
+                  onClick={() => toggleStage(stage)}
+                  title={`展开「${stage}」`}
+                >
+                  <span className="text-sm font-semibold text-gray-600" style={{ writingMode: 'vertical-rl', letterSpacing: '0.1em' }}>{stage}</span>
+                  <span className="bg-white text-gray-600 text-xs px-2 py-0.5 rounded-full shadow-sm">{groupedItems[stage]?.length || 0}</span>
+                </div>
+              )
+            }
+            return (
+            <div key={stage} className="w-72 bg-gray-100/50 rounded-xl flex flex-col h-full max-h-full border border-gray-200 shrink-0">
+              <div className="p-2.5 border-b border-gray-200 bg-gray-100 rounded-t-xl flex justify-between items-center shrink-0 cursor-pointer hover:bg-gray-200/60 transition-colors" onClick={() => toggleStage(stage)}>
+                <h3 className="font-semibold text-gray-700 text-sm">{stage}</h3>
                 <span className="bg-white text-gray-600 text-xs px-2 py-0.5 rounded-full shadow-sm">{groupedItems[stage]?.length || 0}</span>
               </div>
 
-              <div className="p-3 overflow-y-auto flex-1 space-y-3">
-                {loading ? <div className="text-center text-sm text-gray-400 py-4">加载中...</div> :                  groupedItems[stage]?.map(item => (
-                  <div key={item.id} className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm hover:shadow transition-shadow">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-medium text-gray-800 text-sm truncate" title={item.title}>{item.title}</h4>
-                      {item.needBossDecision && <span className="bg-red-100 text-red-700 text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ml-2">需决策</span>}
+              <div className="p-2.5 overflow-y-auto flex-1 space-y-2">
+                {loading ? <div className="text-center text-sm text-gray-400 py-4">加载中...</div> :                  groupedItems[stage]?.map(item => {
+                  const isExpanded = expandedCards.has(item.id)
+                  return (
+                  <div key={item.id} className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow transition-shadow">
+                    {/* Collapsed summary - always visible */}
+                    <div
+                      className="p-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                      onClick={() => toggleCard(item.id)}
+                    >
+                      <div className="flex items-center justify-between mb-0.5">
+                        <h4 className="font-medium text-gray-800 text-xs truncate flex-1" title={item.title}>{item.title}</h4>
+                        <div className="flex items-center gap-1 shrink-0 ml-1">
+                          {item.needBossDecision && <span className="bg-red-100 text-red-700 text-[10px] px-1 py-0.5 rounded font-medium">需决策</span>}
+                          <svg className={`w-3 h-3 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="text-[11px] text-gray-500 truncate">{item.supplier.name}</div>
                     </div>
-                    <div className="text-xs text-gray-500 mb-2 truncate" title={item.supplier.name}>{item.supplier.name}</div>
-                    {item.purchaseAmount !== null && (
-                      <div className="text-xs font-medium text-blue-700 mb-2">金额: ¥{Number(item.purchaseAmount).toLocaleString()}</div>
-                    )}
 
-                    <div className="flex gap-2 text-xs mb-3 flex-wrap">
-                      <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{item.owner?.name || '无负责人'}</span>
-                      <span className={`px-1.5 py-0.5 rounded ${item.priority === '高' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>{item.priority || '中'}</span>
-                      {item.dueDate && <span className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">{new Date(item.dueDate).toLocaleDateString().slice(5)} 截止</span>}
-                    </div>
+                    {/* Expanded details */}
+                    {isExpanded && (
+                      <div className="px-2.5 pb-2.5 border-t border-gray-100">
+                        {item.companyName && (
+                          <div className="text-[11px] text-gray-400 mt-2 truncate" title={item.companyName}>🏢 {item.companyName}</div>
+                        )}
+                        {item.purchaseAmount !== null && (
+                          <div className="text-[11px] font-medium text-blue-700 mt-1">金额: ¥{Number(item.purchaseAmount).toLocaleString()}</div>
+                        )}
+                        <div className="flex gap-1.5 text-[11px] flex-wrap mt-2 mb-2">
+                          <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{item.owner?.name || '无负责人'}</span>
+                          <span className={`px-1.5 py-0.5 rounded ${item.priority === '高' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>{item.priority || '中'}</span>
+                          {item.dueDate && <span className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">{new Date(item.dueDate).toLocaleDateString().slice(5)} 截止</span>}
+                        </div>
 
-                    {(item.currentProblem || item.nextAction) && (
-                      <div className="text-xs bg-gray-50 p-2 rounded mb-3 space-y-1">
-                        {item.currentProblem && <div className="text-gray-700 truncate" title={item.currentProblem}><span className="text-gray-400">问题:</span> {item.currentProblem}</div>}
-                        {item.nextAction && <div className="text-gray-700 truncate" title={item.nextAction}><span className="text-gray-400">动作:</span> {item.nextAction}</div>}
+                        {(item.currentProblem || item.nextAction) && (
+                          <div className="text-[11px] bg-gray-50 p-2 rounded mb-2 space-y-1">
+                            {item.currentProblem && <div className="text-gray-700"><span className="text-gray-400">问题:</span> {item.currentProblem}</div>}
+                            {item.nextAction && <div className="text-gray-700"><span className="text-gray-400">动作:</span> {item.nextAction}</div>}
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                          <select
+                            className="text-xs border border-gray-200 rounded px-1 py-0.5 bg-gray-50 text-gray-600 hover:bg-white w-24"
+                            value={item.currentStage}
+                            onChange={(e) => handleQuickUpdate(item.id, 'currentStage', e.target.value)}
+                          >
+                            {PURCHASE_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+
+                          <div className="flex gap-2">
+                            <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setFormOpen(true); }} className="text-xs text-blue-600 hover:underline">编辑</button>
+                            <button onClick={(e) => { e.stopPropagation(); setArchiveItem(item); }} className="text-xs text-gray-400 hover:text-red-600">归档</button>
+                          </div>
+                        </div>
                       </div>
                     )}
-
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                      <select
-                        className="text-xs border border-gray-200 rounded px-1 py-1 bg-gray-50 text-gray-600 hover:bg-white w-24"
-                        value={item.currentStage}
-                        onChange={(e) => handleQuickUpdate(item.id, 'currentStage', e.target.value)}
-                      >
-                        {PURCHASE_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-
-                      <div className="flex gap-2">
-                        <button onClick={() => { setEditingItem(item); setFormOpen(true); }} className="text-xs text-blue-600 hover:underline">编辑</button>
-                        <button onClick={() => setArchiveItem(item)} className="text-xs text-gray-400 hover:text-red-600">归档</button>
-                      </div>
-                    </div>
                   </div>
-                ))}
+                  )
+                })}
                 {!loading && groupedItems[stage]?.length === 0 && (
                   <div className="text-center text-xs text-gray-400 py-8 border-2 border-dashed border-gray-200 rounded-lg">
                     暂无流程
@@ -233,7 +400,8 @@ function PurchaseBoardContent() {
                 )}
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
@@ -255,6 +423,162 @@ function PurchaseBoardContent() {
         message={`确定要归档采购事项「${archiveItem?.title}」吗？归档后将在看板中隐藏。`}
         confirmText="确认归档"
       />
+
+      {/* Import CSV Modal */}
+      <Modal open={importModalOpen} onClose={() => { setImportModalOpen(false); setImportFile(null); setImportErrors([]); setImportResult('') }} title="导入审批 CSV">
+        <div className="space-y-4 w-[480px]">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">选择 CSV 文件</label>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+              className="w-full border border-gray-200 rounded px-3 py-2 text-sm"
+            />
+            <div className="mt-2 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const res = await fetch('/api/csv-templates?type=purchase-processes')
+                    if (!res.ok) throw new Error('下载失败')
+                    const blob = await res.blob()
+                    const url = window.URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = 'purchase_processes_template.csv'
+                    a.click()
+                    window.URL.revokeObjectURL(url)
+                  } catch {
+                    showToast('下载模板失败', 'error')
+                  }
+                }}
+                className="text-xs text-blue-600 hover:underline"
+              >
+                下载 CSV 模板
+              </button>
+              <span className="text-xs text-gray-400">|</span>
+              <span className="text-xs text-gray-500">必填表头：所属项目、支付对象</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">默认品类</label>
+              <select
+                value={defaultCategoryId}
+                onChange={(e) => setDefaultCategoryId(e.target.value)}
+                className="w-full border border-gray-200 rounded px-3 py-2 text-sm"
+              >
+                <option value="">无（默认未分类）</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">默认负责人 *</label>
+              <select
+                value={defaultOwnerId}
+                onChange={(e) => setDefaultOwnerId(e.target.value)}
+                className="w-full border border-gray-200 rounded px-3 py-2 text-sm"
+              >
+                <option value="">请选择负责人</option>
+                {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">默认需求提交人</label>
+              <select
+                value={defaultRequesterId}
+                onChange={(e) => setDefaultRequesterId(e.target.value)}
+                className="w-full border border-gray-200 rounded px-3 py-2 text-sm"
+              >
+                <option value="">无（默认提交人）</option>
+                {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">默认销售配合人</label>
+              <select
+                value={defaultSalesPersonId}
+                onChange={(e) => setDefaultSalesPersonId(e.target.value)}
+                className="w-full border border-gray-200 rounded px-3 py-2 text-sm"
+              >
+                <option value="">无（可选）</option>
+                {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">默认优先级</label>
+              <select
+                value={defaultPriority}
+                onChange={(e) => setDefaultPriority(e.target.value)}
+                className="w-full border border-gray-200 rounded px-3 py-2 text-sm"
+              >
+                {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {importErrors.length > 0 && (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {importResult || '导入失败'}
+              </div>
+              <div className="max-h-52 overflow-auto rounded-lg border border-gray-200">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-gray-50 text-gray-600">
+                    <tr>
+                      <th className="px-2 py-2 font-medium">行号</th>
+                      <th className="px-2 py-2 font-medium">字段</th>
+                      <th className="px-2 py-2 font-medium">原始值</th>
+                      <th className="px-2 py-2 font-medium">错误原因</th>
+                      <th className="px-2 py-2 font-medium">修改建议</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {importErrors.map((err, index) => (
+                      <tr key={`${err.row}-${err.field}-${index}`}>
+                        <td className="px-2 py-2">{err.row}</td>
+                        <td className="px-2 py-2">{err.field}</td>
+                        <td className="max-w-28 truncate px-2 py-2 text-gray-500" title={err.value || ''}>{err.value || ''}</td>
+                        <td className="px-2 py-2 text-red-600">{err.reason}</td>
+                        <td className="px-2 py-2 text-gray-500">{err.suggestion || ''}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <button
+                type="button"
+                onClick={downloadImportErrorCSV}
+                className="text-xs text-red-700 hover:underline"
+              >
+                下载错误报告 CSV
+              </button>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            <button
+              onClick={() => { setImportModalOpen(false); setImportFile(null); }}
+              className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleImport}
+              disabled={importing || !importFile || !defaultOwnerId}
+              className="h-10 px-6 text-[13px] text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {importing ? '导入中...' : '开始导入'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

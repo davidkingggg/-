@@ -24,8 +24,8 @@
 - `name`: 供应商名称
 - `categoryId`: 主品类
 - `region`: 所在地区
-- `companyType`: 厂家 / 代理商 / 经销商 / 服务商 / 安装公司 / 其他
-- `source`: 展会 / 网络 / 老板推荐 / 销售推荐 / 供应商转介绍 / 其他
+- `companyType`: 推荐标签 + 自定义输入
+- `source`: 推荐标签 + 自定义输入
 - `hasQuoted`: 是否已报价
 - `hasVisited`: 是否已考察
 - `willingToJoin`: 是否愿意入驻平台
@@ -144,7 +144,7 @@
 - `supplierId`: 关联供应商
 - `categoryId`: 关联品类
 - `date`: 日期
-- `location`: 地点
+- `location`: 所在地区
 - `participants`: 参与人员
 - `keyPoints`: 沟通重点
 - `productHighlights`: 产品亮点

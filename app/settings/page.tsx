@@ -78,7 +78,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">系统设置</h1>
+        <h1 className="text-[22px] font-bold text-[#0f172a] mb-2">系统设置</h1>
         <div className="text-gray-500">加载中...</div>
       </div>
     )
@@ -88,49 +88,49 @@ export default function SettingsPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">系统设置</h1>
-          <p className="text-sm text-gray-500 mt-1">管理系统级全局配置参数</p>
+          <h1 className="text-[22px] font-bold text-[#0f172a]">系统设置</h1>
+          <p className="text-[13px] text-slate-400 mt-0.5">管理系统级全局配置参数</p>
         </div>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm font-medium shadow-sm"
+          className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors text-[13px] font-semibold shadow-sm"
         >
           {saving ? '保存中...' : '保存设置'}
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="rounded-[20px] bg-white border border-[#e5eaf3] overflow-hidden" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="text-left px-6 py-3.5 font-semibold text-gray-600 w-48">配置键</th>
-              <th className="text-left px-6 py-3.5 font-semibold text-gray-600">配置值</th>
-              <th className="text-left px-6 py-3.5 font-semibold text-gray-600 w-64">备注说明</th>
+            <tr className="bg-[#f8fafc] border-b border-[#e5eaf3]">
+              <th className="text-left px-6 h-[52px] text-[13px] font-bold text-[#475569] w-48">配置键</th>
+              <th className="text-left px-6 h-[52px] text-[13px] font-bold text-[#475569]">配置值</th>
+              <th className="text-left px-6 h-[52px] text-[13px] font-bold text-[#475569] w-64">备注说明</th>
             </tr>
           </thead>
           <tbody>
             {settings.map((s) => (
-              <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                <td className="px-6 py-4">
+              <tr key={s.id} className="border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#f8fafc] transition-colors">
+                <td className="px-6 h-[58px] text-[14px]">
                   <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono text-gray-700">
                     {s.key}
                   </code>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 h-[58px] text-[14px]">
                   <input
                     type="text"
                     value={editedSettings[s.id]?.value ?? ''}
                     onChange={(e) => handleChange(s.id, 'value', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                    className="w-full h-10 border border-[#e5eaf3] rounded-xl px-3 text-[14px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
                   />
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 h-[58px] text-[14px]">
                   <input
                     type="text"
                     value={editedSettings[s.id]?.notes ?? ''}
                     onChange={(e) => handleChange(s.id, 'notes', e.target.value)}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                    className="w-full h-10 border border-[#e5eaf3] rounded-xl px-3 text-[14px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
                     placeholder="备注说明"
                   />
                 </td>

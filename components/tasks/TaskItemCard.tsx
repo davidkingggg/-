@@ -9,10 +9,23 @@ function formatDate(value?: string) {
   }).format(new Date(value))
 }
 
-function priorityClass(priority?: string) {
-  if (priority === '高') return 'bg-red-50 text-red-700 border-red-100'
-  if (priority === '中') return 'bg-amber-50 text-amber-700 border-amber-100'
-  return 'bg-gray-50 text-gray-600 border-gray-100'
+function formatFullDate(value?: string) {
+  if (!value) return '未设置'
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(value))
+}
+
+function priorityDot(priority?: string) {
+  if (priority === '高') return '#ef4444'
+  if (priority === '中') return '#f59e0b'
+  return '#94a3b8'
+}
+
+function priorityLabel(priority?: string) {
+  return priority || '低'
 }
 
 interface TaskItemCardProps {
@@ -21,46 +34,82 @@ interface TaskItemCardProps {
 
 export default function TaskItemCard({ item }: TaskItemCardProps) {
   return (
-    <div className={`rounded-lg border bg-white p-4 shadow-sm ${item.isOverdue ? 'border-red-200' : 'border-gray-200'}`}>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-base font-semibold text-gray-900">{item.title}</h3>
-            <span className="rounded border border-blue-100 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-              {item.sourceLabel}
-            </span>
-            <span className={`rounded border px-2 py-0.5 text-xs font-medium ${priorityClass(item.priority)}`}>
-              {item.priority || '低'}
-            </span>
-            {item.isOverdue && (
-              <span className="rounded border border-red-100 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
-                已超期
-              </span>
-            )}
-          </div>
+    <div
+      className="relative rounded-2xl border bg-white px-5 py-4 transition-shadow hover:shadow-md"
+      style={{
+        borderColor: item.isOverdue ? '#fecaca' : '#e5eaf3',
+        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)',
+        ...(item.isOverdue
+          ? { background: 'linear-gradient(90deg, #fff7f7 0%, #ffffff 36%)' }
+          : {}),
+      }}
+    >
+      {/* 顶部：标签行 + 截止日期 */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+            style={{ color: priorityDot(item.priority), backgroundColor: `${priorityDot(item.priority)}12` }}
+          >
+            <span
+              className="inline-block h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: priorityDot(item.priority) }}
+            />
+            {priorityLabel(item.priority)}优先级
+          </span>
 
-          <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-600 md:grid-cols-2 xl:grid-cols-4">
-            <div>截止日期：{formatDate(item.dueDate)}</div>
-            <div>状态：{item.status}</div>
-            <div>阶段：{item.currentStage || '未设置'}</div>
-            <div>负责人：{item.ownerName || '未设置'}</div>
-            <div>供应商：{item.supplierName || '无'}</div>
-            <div>品类：{item.categoryName || '无'}</div>
-          </div>
-
-          {(item.nextAction || item.currentProblem) && (
-            <div className="mt-3 space-y-1 rounded-md bg-gray-50 p-3 text-sm text-gray-700">
-              {item.nextAction && <div>下一步动作：{item.nextAction}</div>}
-              {item.currentProblem && <div>当前问题：{item.currentProblem}</div>}
-            </div>
+          {item.isOverdue && (
+            <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-600">
+              已超期
+            </span>
           )}
+
+          <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-600">
+            {item.sourceLabel}
+          </span>
+
+          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">
+            {item.status}
+          </span>
         </div>
 
+        <span className="text-sm font-semibold" style={{ color: item.isOverdue ? '#dc2626' : '#64748b' }}>
+          {formatFullDate(item.dueDate)}
+        </span>
+      </div>
+
+      {/* 标题 */}
+      <h3 className="mt-2 text-lg font-extrabold leading-snug text-gray-900">
+        {item.title}
+      </h3>
+
+      {/* 元信息 */}
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+        {item.ownerName && <span>负责人：{item.ownerName}</span>}
+        {item.currentStage && <span>阶段：{item.currentStage}</span>}
+        {item.supplierName && <span>供应商：{item.supplierName}</span>}
+        {item.categoryName && <span>品类：{item.categoryName}</span>}
+      </div>
+
+      {/* 下一步动作 */}
+      {item.nextAction && (
+        <div
+          className="mt-3 rounded-xl px-3 py-2.5 text-sm text-gray-600"
+          style={{ background: '#f8fafc' }}
+        >
+          <span className="font-medium text-gray-500">下一步：</span>
+          {item.nextAction}
+        </div>
+      )}
+
+      {/* 底部操作 */}
+      <div className="mt-3 flex items-center justify-end">
         <Link
-          className="inline-flex shrink-0 items-center justify-center rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+          className="inline-flex items-center justify-center rounded-lg border px-4 py-1.5 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50"
+          style={{ borderColor: '#bfdbfe' }}
           href={item.href}
         >
-          查看来源
+          查看详情
         </Link>
       </div>
     </div>

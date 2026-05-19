@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { syncSupplierRecommendedLevel } from '@/lib/score-utils'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type PrismaDelegate = { findUnique: (args: any) => Promise<Record<string, unknown> | null>; update: (args: any) => Promise<unknown> }
+type PrismaDelegate = { findUnique: (args: unknown) => Promise<Record<string, unknown> | null>; update: (args: unknown) => Promise<unknown> }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getDelegate(model: string): PrismaDelegate {
   return (prisma as unknown as Record<string, PrismaDelegate>)[model]
 }

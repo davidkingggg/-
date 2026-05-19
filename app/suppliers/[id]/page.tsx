@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/Toast'
 import Modal from '@/components/ui/Modal'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import TagInput from '@/components/ui/TagInput'
+import { COMMON_COMPANY_TYPES, COMMON_SOURCES } from '@/lib/workflow-constants'
 
 interface CategoryOption { id: string; name: string }
 interface RiskTag { id: string; name: string; color: string | null }
@@ -36,8 +38,6 @@ interface Supplier {
   contacts: Contact[]; riskTags: RiskTagRelation[]
 }
 
-const COMPANY_TYPES = ['厂家', '代理商', '经销商', '服务商', '安装公司', '其他']
-const SOURCES = ['展会', '网络', '老板推荐', '销售推荐', '供应商转介绍', '其他']
 const COOPERATION = ['强', '一般', '弱', '未确认']
 const PRICE_LEVELS = ['高', '中', '低', '未知']
 const REC_LEVELS = ['A优先推荐', 'B备选', 'C暂不推荐', '未评级']
@@ -175,17 +175,18 @@ export default function SupplierDetailPage() {
   if (loading) return <div className="p-6 text-gray-500">加载中...</div>
   if (!supplier) return <div className="p-6 text-red-500">供应商不存在</div>
 
-  const ic = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
-  const sc = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20'
-  const lc = 'block text-sm font-medium text-gray-700 mb-1'
+  const ic = 'w-full h-10 border border-[#e5eaf3] rounded-xl px-3 text-[14px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400'
+  const sc = 'h-10 border border-[#e5eaf3] rounded-xl px-3 text-[14px] bg-white text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20'
+  const lc = 'block text-[13px] font-semibold text-[#334155] mb-1.5'
+  const tc = 'w-full border border-[#e5eaf3] rounded-xl px-3 py-2 text-[14px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400'
 
   return (
     <div className="p-6">
       <button onClick={() => router.push('/suppliers')} className="text-sm text-gray-500 hover:text-gray-700 mb-2 inline-block">← 返回供应商列表</button>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">{supplier.name}</h1>
-          <p className="text-sm text-gray-500 mt-1">主品类：{supplier.category.name} · {supplier.region || '未填写地区'}</p>
+          <h1 className="text-[22px] font-bold text-[#0f172a]">{supplier.name}</h1>
+          <p className="text-[13px] text-slate-400 mt-0.5">主品类：{supplier.category.name} · {supplier.region || '未填写所在地区'}</p>
         </div>
       </div>
 
@@ -202,11 +203,11 @@ export default function SupplierDetailPage() {
 
       {/* Tab 0: 基本信息 */}
       {activeTab === 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-6" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
           {!editing ? (
             <div>
               <div className="flex justify-end mb-4">
-                <button onClick={startEdit} className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">编辑信息</button>
+                <button onClick={startEdit} className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm">编辑信息</button>
               </div>
               <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
                 {[
@@ -236,8 +237,8 @@ export default function SupplierDetailPage() {
                 <div><label className={lc}>供应商名称 *</label><input type="text" value={form.name as string} onChange={e => setForm({...form, name: e.target.value})} className={ic} required /></div>
                 <div><label className={lc}>主品类 *</label><select value={form.categoryId as string} onChange={e => setForm({...form, categoryId: e.target.value})} className={sc} required><option value="">请选择</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
                 <div><label className={lc}>所在地区</label><input type="text" value={form.region as string} onChange={e => setForm({...form, region: e.target.value})} className={ic} /></div>
-                <div><label className={lc}>公司性质</label><select value={form.companyType as string} onChange={e => setForm({...form, companyType: e.target.value})} className={sc}><option value="">请选择</option>{COMPANY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-                <div><label className={lc}>来源</label><select value={form.source as string} onChange={e => setForm({...form, source: e.target.value})} className={sc}><option value="">请选择</option>{SOURCES.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                <div><label className={lc}>公司性质</label><TagInput value={form.companyType as string} onChange={v => setForm({...form, companyType: v})} suggestions={COMMON_COMPANY_TYPES} placeholder="请选择或输入" /></div>
+                <div><label className={lc}>来源</label><TagInput value={form.source as string} onChange={v => setForm({...form, source: v})} suggestions={COMMON_SOURCES} placeholder="请选择或输入" /></div>
                 <div><label className={lc}>合作意愿</label><select value={form.cooperationWillingness as string} onChange={e => setForm({...form, cooperationWillingness: e.target.value})} className={sc}><option value="">请选择</option>{COOPERATION.map(l => <option key={l} value={l}>{l}</option>)}</select></div>
                 <div><label className={lc}>价格水平</label><select value={form.priceLevel as string} onChange={e => setForm({...form, priceLevel: e.target.value})} className={sc}><option value="">请选择</option>{PRICE_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}</select></div>
                 <div><label className={lc}>推荐等级</label><select value={form.recommendedLevel as string} onChange={e => setForm({...form, recommendedLevel: e.target.value})} className={sc}><option value="">请选择</option>{REC_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}</select></div>
@@ -254,11 +255,11 @@ export default function SupplierDetailPage() {
                 <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.hasVisited as boolean} onChange={e => setForm({...form, hasVisited: e.target.checked})} className="rounded" />已考察</label>
                 <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.willingToJoin as boolean} onChange={e => setForm({...form, willingToJoin: e.target.checked})} className="rounded" />愿意入驻</label>
               </div>
-              <div><label className={lc}>风险摘要</label><textarea value={form.riskSummary as string} onChange={e => setForm({...form, riskSummary: e.target.value})} rows={2} className={ic} /></div>
-              <div><label className={lc}>备注</label><textarea value={form.notes as string} onChange={e => setForm({...form, notes: e.target.value})} rows={2} className={ic} /></div>
+              <div><label className={lc}>风险摘要</label><textarea value={form.riskSummary as string} onChange={e => setForm({...form, riskSummary: e.target.value})} rows={2} className={tc} /></div>
+              <div><label className={lc}>备注</label><textarea value={form.notes as string} onChange={e => setForm({...form, notes: e.target.value})} rows={2} className={tc} /></div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setEditing(false)} className="px-4 py-2 text-sm bg-gray-100 rounded-lg hover:bg-gray-200">取消</button>
-                <button type="submit" disabled={saving} className="px-5 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50">{saving ? '保存中...' : '保存'}</button>
+                <button type="button" onClick={() => setEditing(false)} className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium">取消</button>
+                <button type="submit" disabled={saving} className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm disabled:opacity-50">{saving ? '保存中...' : '保存'}</button>
               </div>
             </form>
           )}
@@ -267,17 +268,17 @@ export default function SupplierDetailPage() {
 
       {/* Tab 1: 联系人 */}
       {activeTab === 1 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-6" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
           <div className="flex justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-800">联系人列表</h2>
-            <button onClick={openAddContact} className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700">+ 新增联系人</button>
+            <button onClick={openAddContact} className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm">+ 新增联系人</button>
           </div>
           {supplier.contacts.length === 0 ? <div className="text-gray-400 text-center py-8">暂无联系人</div> : (
             <table className="w-full text-sm">
-              <thead><tr className="bg-gray-50 border-b"><th className="text-left px-4 py-3 font-semibold text-gray-600">姓名</th><th className="text-left px-4 py-3 font-semibold text-gray-600">职务</th><th className="text-left px-4 py-3 font-semibold text-gray-600">电话</th><th className="text-left px-4 py-3 font-semibold text-gray-600">微信</th><th className="text-left px-4 py-3 font-semibold text-gray-600">邮箱</th><th className="text-center px-4 py-3 font-semibold text-gray-600">主要</th><th className="text-right px-4 py-3 font-semibold text-gray-600">操作</th></tr></thead>
+              <thead><tr className="bg-[#f8fafc] border-b border-[#e5eaf3]"><th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">姓名</th><th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">职务</th><th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">电话</th><th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">微信</th><th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">邮箱</th><th className="text-center px-4 h-[52px] text-[13px] font-bold text-[#475569]">主要</th><th className="text-right px-4 h-[52px] text-[13px] font-bold text-[#475569]">操作</th></tr></thead>
               <tbody>
                 {supplier.contacts.map(c => (
-                  <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                  <tr key={c.id} className="border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#f8fafc]">
                     <td className="px-4 py-3 font-medium">{c.name}</td>
                     <td className="px-4 py-3 text-gray-600">{c.position || '-'}</td>
                     <td className="px-4 py-3 text-gray-600">{c.phone || '-'}</td>
@@ -285,8 +286,8 @@ export default function SupplierDetailPage() {
                     <td className="px-4 py-3 text-gray-600">{c.email || '-'}</td>
                     <td className="px-4 py-3 text-center">{c.isPrimary ? <span className="text-blue-600 font-medium">✓</span> : '-'}</td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => openEditContact(c)} className="text-blue-600 hover:text-blue-800 mr-3 text-xs font-medium">编辑</button>
-                      <button onClick={() => setArchiveContact(c)} className="text-red-500 hover:text-red-700 text-xs font-medium">归档</button>
+                      <button onClick={() => openEditContact(c)} className="text-[13px] font-semibold text-[#2563eb] hover:text-blue-800 mr-4">编辑</button>
+                      <button onClick={() => setArchiveContact(c)} className="text-[13px] font-semibold text-[#ef4444] hover:text-red-700">归档</button>
                     </td>
                   </tr>
                 ))}
@@ -303,10 +304,10 @@ export default function SupplierDetailPage() {
                 <div><label className={lc}>邮箱</label><input type="email" value={contactForm.email} onChange={e => setContactForm({...contactForm, email: e.target.value})} className={ic} /></div>
               </div>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={contactForm.isPrimary} onChange={e => setContactForm({...contactForm, isPrimary: e.target.checked})} className="rounded" />主要联系人</label>
-              <div><label className={lc}>备注</label><textarea value={contactForm.notes} onChange={e => setContactForm({...contactForm, notes: e.target.value})} rows={2} className={ic} /></div>
+              <div><label className={lc}>备注</label><textarea value={contactForm.notes} onChange={e => setContactForm({...contactForm, notes: e.target.value})} rows={2} className={tc} /></div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setContactModal(false)} className="px-4 py-2 text-sm bg-gray-100 rounded-lg hover:bg-gray-200">取消</button>
-                <button type="submit" className="px-5 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700">保存</button>
+                <button type="button" onClick={() => setContactModal(false)} className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium">取消</button>
+                <button type="submit" className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm">保存</button>
               </div>
             </form>
           </Modal>
@@ -317,7 +318,7 @@ export default function SupplierDetailPage() {
 
       {/* Tab 2: 风险与备注 */}
       {activeTab === 2 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-6" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
           <h2 className="text-lg font-semibold text-gray-800 mb-4">风险标签</h2>
           <div className="flex flex-wrap gap-2 mb-4">
             {allRiskTags.map(tag => (
@@ -327,7 +328,7 @@ export default function SupplierDetailPage() {
             ))}
           </div>
           {tagsDirty && (
-            <button onClick={saveRiskTags} className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 mb-6">保存标签变更</button>
+            <button onClick={saveRiskTags} className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm mb-6">保存标签变更</button>
           )}
           <h2 className="text-lg font-semibold text-gray-800 mb-2 mt-6">风险摘要</h2>
           <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-4">{supplier.riskSummary || '暂无风险摘要'}</p>
@@ -359,27 +360,27 @@ function SupplierQuotesTab({ supplierId }: { supplierId: string }) {
       .finally(() => setLoading(false))
   }, [supplierId])
 
-  if (loading) return <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">加载中...</div>
+  if (loading) return <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-12 text-center text-gray-400" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>加载中...</div>
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-6" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
       <h2 className="text-lg font-semibold text-gray-800 mb-4">关联报价单</h2>
       {quotes.length === 0 ? (
         <div className="text-gray-400 text-center py-8">暂无关联报价</div>
       ) : (
         <table className="w-full text-sm">
-          <thead><tr className="bg-gray-50 border-b">
-            <th className="text-left px-4 py-3 font-semibold text-gray-600">编号</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600">名称</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600">品类</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600">报价日期</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600">阶段</th>
-            <th className="text-center px-4 py-3 font-semibold text-gray-600">明细数</th>
-            <th className="text-right px-4 py-3 font-semibold text-gray-600">操作</th>
+          <thead><tr className="bg-[#f8fafc] border-b border-[#e5eaf3]">
+            <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">编号</th>
+            <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">名称</th>
+            <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">品类</th>
+            <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">报价日期</th>
+            <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">阶段</th>
+            <th className="text-center px-4 h-[52px] text-[13px] font-bold text-[#475569]">明细数</th>
+            <th className="text-right px-4 h-[52px] text-[13px] font-bold text-[#475569]">操作</th>
           </tr></thead>
           <tbody>
             {quotes.map(q => (
-              <tr key={q.id} className="border-b border-gray-50 hover:bg-blue-50/30 transition-colors">
+              <tr key={q.id} className="border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#f8fafc]">
                 <td className="px-4 py-3 font-mono text-xs text-gray-500">{q.quoteNumber || '-'}</td>
                 <td className="px-4 py-3 font-medium">{q.title || '报价'}</td>
                 <td className="px-4 py-3 text-gray-600">{q.category.name}</td>
@@ -387,7 +388,7 @@ function SupplierQuotesTab({ supplierId }: { supplierId: string }) {
                 <td className="px-4 py-3">{q.quoteStage || '-'}</td>
                 <td className="px-4 py-3 text-center">{q.items.length}</td>
                 <td className="px-4 py-3 text-right">
-                  <button onClick={() => router.push(`/quotes/${q.id}`)} className="text-blue-600 hover:text-blue-800 text-xs font-medium">查看详情</button>
+                  <button onClick={() => router.push(`/quotes/${q.id}`)} className="text-[13px] font-semibold text-[#2563eb] hover:text-blue-800">查看详情</button>
                 </td>
               </tr>
             ))}
@@ -482,14 +483,17 @@ function SupplierAttachmentsTab({ supplierId }: { supplierId: string }) {
     }
   }
 
+  const attIc = 'w-full h-10 border border-[#e5eaf3] rounded-xl px-3 text-[14px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400'
+  const attLc = 'block text-[13px] font-semibold text-[#334155] mb-1.5'
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-6" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
       <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
         本功能仅维护数据库附件路径记录，不上传、不下载、不预览、不校验真实文件。
       </p>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-gray-800">附件列表</h2>
-        <button onClick={() => setAttModal(true)} className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+        <button onClick={() => setAttModal(true)} className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm">
           + 添加附件路径
         </button>
       </div>
@@ -501,18 +505,18 @@ function SupplierAttachmentsTab({ supplierId }: { supplierId: string }) {
       ) : (
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-50 border-b">
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">文件名</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">路径</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">类型</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">备注</th>
-              <th className="text-left px-4 py-3 font-semibold text-gray-600">创建时间</th>
-              <th className="text-right px-4 py-3 font-semibold text-gray-600">操作</th>
+            <tr className="bg-[#f8fafc] border-b border-[#e5eaf3]">
+              <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">文件名</th>
+              <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">路径</th>
+              <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">类型</th>
+              <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">备注</th>
+              <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">创建时间</th>
+              <th className="text-right px-4 h-[52px] text-[13px] font-bold text-[#475569]">操作</th>
             </tr>
           </thead>
           <tbody>
             {attachments.map((att) => (
-              <tr key={att.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+              <tr key={att.id} className="border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#f8fafc]">
                 <td className="px-4 py-3 font-medium">{att.fileName}</td>
                 <td className="px-4 py-3 text-gray-500 text-xs font-mono max-w-xs truncate" title={att.filePath}>
                   {att.filePath}
@@ -521,7 +525,7 @@ function SupplierAttachmentsTab({ supplierId }: { supplierId: string }) {
                 <td className="px-4 py-3 text-gray-600">{att.notes || '-'}</td>
                 <td className="px-4 py-3 text-gray-600">{new Date(att.createdAt).toLocaleString('zh-CN')}</td>
                 <td className="px-4 py-3 text-right">
-                  <button onClick={() => setArchiveTarget(att)} className="text-red-500 hover:text-red-700 text-xs font-medium">
+                  <button onClick={() => setArchiveTarget(att)} className="text-[13px] font-semibold text-[#ef4444] hover:text-red-700">
                     移除记录
                   </button>
                 </td>
@@ -534,48 +538,48 @@ function SupplierAttachmentsTab({ supplierId }: { supplierId: string }) {
       <Modal open={attModal} onClose={() => setAttModal(false)} title="添加附件路径">
         <form onSubmit={saveAttachment} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">文件路径 <span className="text-red-500">*</span></label>
+            <label className={attLc}>文件路径 <span className="text-red-500">*</span></label>
             <input
               type="text"
               value={attForm.filePath}
               onChange={(e) => setAttForm({ ...attForm, filePath: e.target.value })}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className={attIc}
               required
               placeholder="本地文件路径"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">文件名</label>
+            <label className={attLc}>文件名</label>
             <input
               type="text"
               value={attForm.fileName}
               onChange={(e) => setAttForm({ ...attForm, fileName: e.target.value })}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className={attIc}
               placeholder="留空时将按路径自动推导"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">文件类型</label>
+            <label className={attLc}>文件类型</label>
             <input
               type="text"
               value={attForm.fileType}
               onChange={(e) => setAttForm({ ...attForm, fileType: e.target.value })}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className={attIc}
               placeholder="如 pdf、xlsx；留空时自动推导"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">备注</label>
+            <label className={attLc}>备注</label>
             <input
               type="text"
               value={attForm.notes}
               onChange={(e) => setAttForm({ ...attForm, notes: e.target.value })}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className={attIc}
             />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => setAttModal(false)} className="px-4 py-2 text-sm bg-gray-100 rounded-lg hover:bg-gray-200">取消</button>
-            <button type="submit" className="px-5 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700">保存</button>
+            <button type="button" onClick={() => setAttModal(false)} className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium">取消</button>
+            <button type="submit" className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm">保存</button>
           </div>
         </form>
       </Modal>
@@ -617,24 +621,24 @@ function SupplierScoresAndInvestigationsTab({ supplier }: { supplier: Supplier }
     }).catch(() => setLoading(false))
   }, [supplier.id])
 
-  if (loading) return <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">加载中...</div>
+  if (loading) return <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-12 text-center text-gray-400" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>加载中...</div>
 
   const latestScore = scores.length > 0 ? scores[0] : null;
 
   return (
     <div className="space-y-6">
       {/* 评分摘要区 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-6" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-gray-800">最新评分摘要</h2>
-          <button 
+          <button
             onClick={() => router.push(`/scores/new?supplierId=${supplier.id}&categoryId=${supplier.categoryId}`)}
-            className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+            className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm"
           >
             + 新建评分
           </button>
         </div>
-        
+
         {latestScore ? (
           <div className="grid grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <div>
@@ -662,17 +666,17 @@ function SupplierScoresAndInvestigationsTab({ supplier }: { supplier: Supplier }
       {/* 历史记录区两列 */}
       <div className="grid grid-cols-2 gap-6">
         {/* 历史评分 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-6" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
           <h2 className="text-base font-semibold text-gray-800 mb-4">历史评分记录</h2>
           {scores.length === 0 ? <div className="text-gray-400 text-sm">暂无记录</div> : (
             <div className="space-y-3">
               {scores.map(s => (
-                <div key={s.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50">
+                <div key={s.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-[#f8fafc]">
                   <div>
                     <div className="font-medium text-gray-800 text-sm">{new Date(s.scoreDate).toLocaleDateString()} - {s.finalLevel}</div>
                     <div className="text-xs text-gray-500 mt-1">总分: {Number(s.totalScore).toFixed(1)} | 评分人: {s.scorer?.name || '-'}</div>
                   </div>
-                  <button onClick={() => router.push(`/scores/${s.id}/edit`)} className="text-blue-600 text-xs hover:underline">查看/编辑</button>
+                  <button onClick={() => router.push(`/scores/${s.id}/edit`)} className="text-[13px] font-semibold text-[#2563eb] hover:text-blue-800">查看/编辑</button>
                 </div>
               ))}
             </div>
@@ -680,12 +684,12 @@ function SupplierScoresAndInvestigationsTab({ supplier }: { supplier: Supplier }
         </div>
 
         {/* 考察记录 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-6" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-base font-semibold text-gray-800">调研/考察记录</h2>
-            <button 
+            <button
               onClick={() => router.push(`/investigations`)}
-              className="text-blue-600 text-xs hover:underline"
+              className="text-[13px] font-semibold text-[#2563eb] hover:text-blue-800"
             >
               前往考察模块管理
             </button>
@@ -693,7 +697,7 @@ function SupplierScoresAndInvestigationsTab({ supplier }: { supplier: Supplier }
           {investigations.length === 0 ? <div className="text-gray-400 text-sm">暂无记录</div> : (
             <div className="space-y-3">
               {investigations.map(inv => (
-                <div key={inv.id} className="p-3 border rounded-lg hover:bg-gray-50">
+                <div key={inv.id} className="p-3 border rounded-lg hover:bg-[#f8fafc]">
                   <div className="flex justify-between mb-1">
                     <span className="font-medium text-gray-800 text-sm">{new Date(inv.date).toLocaleDateString()} · {inv.type}</span>
                     {inv.recommendFollowUp ? <span className="text-emerald-600 text-xs">推荐跟进</span> : <span className="text-gray-400 text-xs">不再跟进</span>}
@@ -723,15 +727,15 @@ function SupplierDevelopmentTab({ supplier }: { supplier: Supplier }) {
       .finally(() => setLoading(false))
   }, [supplier.id])
 
-  if (loading) return <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">加载中...</div>
+  if (loading) return <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-12 text-center text-gray-400" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>加载中...</div>
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-6" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-gray-800">关联开发流程</h2>
         <button
           onClick={() => router.push(`/development-board?supplierId=${supplier.id}&categoryId=${supplier.categoryId}&autoOpen=true`)}
-          className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+          className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm"
         >
           + 新建开发流程
         </button>
@@ -740,16 +744,16 @@ function SupplierDevelopmentTab({ supplier }: { supplier: Supplier }) {
         <div className="text-gray-400 text-center py-8 border-2 border-dashed border-gray-100 rounded-lg">暂无关联的开发流程</div>
       ) : (
         <table className="w-full text-sm">
-          <thead><tr className="bg-gray-50 border-b">
-            <th className="text-left px-4 py-3 font-semibold text-gray-600">品类</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600">当前阶段</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600">状态</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600">负责人</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600">优先级</th>
+          <thead><tr className="bg-[#f8fafc] border-b border-[#e5eaf3]">
+            <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">品类</th>
+            <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">当前阶段</th>
+            <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">状态</th>
+            <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">负责人</th>
+            <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">优先级</th>
           </tr></thead>
           <tbody>
             {processes.map(p => (
-              <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+              <tr key={p.id} className="border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#f8fafc]">
                 <td className="px-4 py-3">{p.category?.name}</td>
                 <td className="px-4 py-3">{p.currentStage}</td>
                 <td className="px-4 py-3">
@@ -782,15 +786,15 @@ function SupplierPurchaseTab({ supplier }: { supplier: Supplier }) {
       .finally(() => setLoading(false))
   }, [supplier.id])
 
-  if (loading) return <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">加载中...</div>
+  if (loading) return <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-12 text-center text-gray-400" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>加载中...</div>
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-6" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-gray-800">关联采购执行记录</h2>
         <button
           onClick={() => router.push(`/purchase-board?supplierId=${supplier.id}&categoryId=${supplier.categoryId}&autoOpen=true`)}
-          className="px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+          className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm"
         >
           + 新建采购事项
         </button>
@@ -799,17 +803,17 @@ function SupplierPurchaseTab({ supplier }: { supplier: Supplier }) {
         <div className="text-gray-400 text-center py-8 border-2 border-dashed border-gray-100 rounded-lg">暂无关联的采购执行记录</div>
       ) : (
         <table className="w-full text-sm">
-          <thead><tr className="bg-gray-50 border-b">
-            <th className="text-left px-4 py-3 font-semibold text-gray-600">事项名称</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600">品类</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600">当前阶段</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600">状态</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600">采购金额</th>
-            <th className="text-left px-4 py-3 font-semibold text-gray-600">负责人</th>
+          <thead><tr className="bg-[#f8fafc] border-b border-[#e5eaf3]">
+            <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">事项名称</th>
+            <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">品类</th>
+            <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">当前阶段</th>
+            <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">状态</th>
+            <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">采购金额</th>
+            <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">负责人</th>
           </tr></thead>
           <tbody>
             {processes.map(p => (
-              <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+              <tr key={p.id} className="border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#f8fafc]">
                 <td className="px-4 py-3 font-medium">{p.title}</td>
                 <td className="px-4 py-3">{p.category?.name}</td>
                 <td className="px-4 py-3">{p.currentStage}</td>

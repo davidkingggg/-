@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 
-const VALID_COMPANY_TYPES = ['厂家', '代理商', '经销商', '服务商', '安装公司', '其他']
-const VALID_SOURCES = ['展会', '网络', '老板推荐', '销售推荐', '供应商转介绍', '其他']
 const VALID_COOPERATION = ['强', '一般', '弱', '未确认']
 const VALID_PRICE_LEVELS = ['高', '中', '低', '未知']
 const VALID_RECOMMENDED = ['A优先推荐', 'B备选', 'C暂不推荐', '未评级']
@@ -66,13 +64,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '所选品类不存在' }, { status: 400 })
     }
 
+    // 校验文本字段长度
+    if (body.companyType && body.companyType.length > 100) {
+      return NextResponse.json({ error: '公司性质不能超过 100 个字符' }, { status: 400 })
+    }
+    if (body.source && body.source.length > 100) {
+      return NextResponse.json({ error: '来源不能超过 100 个字符' }, { status: 400 })
+    }
+
     // 校验枚举值
-    if (body.companyType && !VALID_COMPANY_TYPES.includes(body.companyType)) {
-      return NextResponse.json({ error: `公司性质必须为以下之一：${VALID_COMPANY_TYPES.join('、')}` }, { status: 400 })
-    }
-    if (body.source && !VALID_SOURCES.includes(body.source)) {
-      return NextResponse.json({ error: `来源必须为以下之一：${VALID_SOURCES.join('、')}` }, { status: 400 })
-    }
     if (body.cooperationWillingness && !VALID_COOPERATION.includes(body.cooperationWillingness)) {
       return NextResponse.json({ error: `合作意愿必须为以下之一：${VALID_COOPERATION.join('、')}` }, { status: 400 })
     }

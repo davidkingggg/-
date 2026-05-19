@@ -69,6 +69,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       hasPrepaymentOffset,
       status,
       remark,
+      companyName,
     } = body;
 
     if (!title) {
@@ -134,6 +135,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         hasPrepaymentOffset: Boolean(hasPrepaymentOffset),
         status,
         remark: remark || null,
+        companyName: companyName || null,
       },
     });
 

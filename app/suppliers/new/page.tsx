@@ -3,13 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/Toast'
+import TagInput from '@/components/ui/TagInput'
+import { COMMON_COMPANY_TYPES, COMMON_SOURCES } from '@/lib/workflow-constants'
 
 interface CategoryOption { id: string; name: string }
 interface RiskTag { id: string; name: string; color: string | null }
 interface ContactForm { name: string; position: string; phone: string; wechat: string; email: string; isPrimary: boolean; notes: string }
-
-const COMPANY_TYPES = ['厂家', '代理商', '经销商', '服务商', '安装公司', '其他']
-const SOURCES = ['展会', '网络', '老板推荐', '销售推荐', '供应商转介绍', '其他']
 const COOPERATION_LEVELS = ['强', '一般', '弱', '未确认']
 const PRICE_LEVELS = ['高', '中', '低', '未知']
 const RECOMMENDED_LEVELS = ['A优先推荐', 'B备选', 'C暂不推荐', '未评级']
@@ -110,9 +109,10 @@ export default function NewSupplierPage() {
     }
   }
 
-  const inputClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all'
-  const selectClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20'
-  const labelClass = 'block text-sm font-medium text-gray-700 mb-1'
+  const inputClass = 'w-full h-10 border border-[#e5eaf3] rounded-xl px-3 text-[14px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all'
+  const selectClass = 'h-10 border border-[#e5eaf3] rounded-xl px-3 text-[14px] bg-white text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20'
+  const labelClass = 'block text-[13px] font-semibold text-[#334155] mb-1.5'
+  const textareaClass = 'w-full border border-[#e5eaf3] rounded-xl px-3 py-2 text-[14px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400'
 
   return (
     <div className="p-6 max-w-4xl">
@@ -123,12 +123,12 @@ export default function NewSupplierPage() {
         >
           ← 返回供应商列表
         </button>
-        <h1 className="text-2xl font-bold text-gray-800">新增供应商</h1>
+        <h1 className="text-[22px] font-bold text-[#0f172a]">新增供应商</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* 基本信息 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-6" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
           <h2 className="text-lg font-semibold text-gray-800 mb-4">基本信息</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -148,17 +148,21 @@ export default function NewSupplierPage() {
             </div>
             <div>
               <label className={labelClass}>公司性质</label>
-              <select value={form.companyType} onChange={e => setForm({...form, companyType: e.target.value})} className={selectClass}>
-                <option value="">请选择</option>
-                {COMPANY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <TagInput
+                value={form.companyType}
+                onChange={v => setForm({...form, companyType: v})}
+                suggestions={COMMON_COMPANY_TYPES}
+                placeholder="请选择或输入"
+              />
             </div>
             <div>
               <label className={labelClass}>来源</label>
-              <select value={form.source} onChange={e => setForm({...form, source: e.target.value})} className={selectClass}>
-                <option value="">请选择</option>
-                {SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <TagInput
+                value={form.source}
+                onChange={v => setForm({...form, source: v})}
+                suggestions={COMMON_SOURCES}
+                placeholder="请选择或输入"
+              />
             </div>
             <div>
               <label className={labelClass}>合作意愿</label>
@@ -203,7 +207,7 @@ export default function NewSupplierPage() {
         </div>
 
         {/* 能力评估 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-6" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
           <h2 className="text-lg font-semibold text-gray-800 mb-4">能力评估</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -225,19 +229,19 @@ export default function NewSupplierPage() {
           </div>
           <div className="mt-4">
             <label className={labelClass}>风险点摘要</label>
-            <textarea value={form.riskSummary} onChange={e => setForm({...form, riskSummary: e.target.value})} rows={2} className={inputClass} />
+            <textarea value={form.riskSummary} onChange={e => setForm({...form, riskSummary: e.target.value})} rows={2} className={textareaClass} />
           </div>
           <div className="mt-4">
             <label className={labelClass}>备注</label>
-            <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} rows={2} className={inputClass} />
+            <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} rows={2} className={textareaClass} />
           </div>
         </div>
 
         {/* 联系人 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-6" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-800">联系人</h2>
-            <button type="button" onClick={addContact} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+            <button type="button" onClick={addContact} className="text-[13px] font-semibold text-[#2563eb] hover:text-blue-800">
               + 添加联系人
             </button>
           </div>
@@ -253,7 +257,7 @@ export default function NewSupplierPage() {
                     </label>
                   </div>
                   {contacts.length > 1 && (
-                    <button type="button" onClick={() => removeContact(i)} className="text-xs text-red-500 hover:text-red-700">
+                    <button type="button" onClick={() => removeContact(i)} className="text-[13px] font-semibold text-[#ef4444] hover:text-red-700">
                       移除
                     </button>
                   )}
@@ -272,7 +276,7 @@ export default function NewSupplierPage() {
         </div>
 
         {/* 风险标签 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="rounded-[20px] bg-white border border-[#e5eaf3] p-6" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
           <h2 className="text-lg font-semibold text-gray-800 mb-4">风险标签</h2>
           <div className="flex flex-wrap gap-2">
             {riskTags.map((tag) => (
@@ -298,14 +302,14 @@ export default function NewSupplierPage() {
           <button
             type="button"
             onClick={() => router.push('/suppliers')}
-            className="px-5 py-2.5 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium"
           >
             取消
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-2.5 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium shadow-sm"
+            className="h-10 px-6 text-[13px] text-white bg-[#2563eb] rounded-xl hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50"
           >
             {saving ? '保存中...' : '保存供应商'}
           </button>

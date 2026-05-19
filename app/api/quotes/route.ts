@@ -83,69 +83,78 @@ export async function POST(request: Request) {
       }
     }
 
-    const quote = await prisma.quoteSheet.create({
-      data: {
-        quoteNumber: body.quoteNumber || null,
-        title: body.title || null,
-        supplierId: body.supplierId,
-        categoryId: body.categoryId,
-        quoteDate: new Date(body.quoteDate),
-        sourceType: body.sourceType || null,
-        quoteStage: body.quoteStage || null,
-        rawText: body.rawText || null,
-        notes: body.notes || null,
-      },
-      include: {
-        supplier: { select: { id: true, name: true } },
-        category: { select: { id: true, name: true } },
-      },
-    })
+    const quote = await prisma.$transaction(async (tx) => {
+      const createdQuote = await tx.quoteSheet.create({
+        data: {
+          quoteNumber: body.quoteNumber || null,
+          title: body.title || null,
+          supplierId: body.supplierId,
+          categoryId: body.categoryId,
+          quoteDate: new Date(body.quoteDate),
+          sourceType: body.sourceType || null,
+          quoteStage: body.quoteStage || null,
+          rawText: body.rawText || null,
+          notes: body.notes || null,
+        },
+        include: {
+          supplier: { select: { id: true, name: true } },
+          category: { select: { id: true, name: true } },
+        },
+      })
 
-    // 创建报价明细（如果有）
-    if (body.items && Array.isArray(body.items)) {
-      for (const item of body.items) {
-        if (!item.productName || !item.productName.trim()) continue
-        await prisma.quoteItem.create({
+      // 创建报价明细（如果有）
+      if (body.items && Array.isArray(body.items)) {
+        for (const item of body.items) {
+          if (!item.productName || !item.productName.trim()) continue
+          await tx.quoteItem.create({
+            data: {
+              quoteSheetId: createdQuote.id,
+              supplierId: body.supplierId,
+              categoryId: body.categoryId,
+              compareKey: item.compareKey || item.productName,
+              productName: item.productName.trim(),
+              model: item.model || null,
+              unit: item.unit || null,
+              price: item.price !== undefined && item.price !== null && item.price !== '' ? item.price : null,
+              includesTax: item.includesTax ?? false,
+              taxRate: item.taxRate !== undefined && item.taxRate !== null && item.taxRate !== '' ? item.taxRate : null,
+              includesFreight: item.includesFreight ?? false,
+              minOrderQty: item.minOrderQty || null,
+              deliveryTime: item.deliveryTime || null,
+              paymentTerms: item.paymentTerms || null,
+              warranty: item.warranty || null,
+              priceNotes: item.priceNotes || null,
+            },
+          })
+        }
+      }
+
+      // 创建附件记录（如果有 filePath）
+      if (body.filePath && body.filePath.trim()) {
+        const fp = body.filePath.trim()
+        const parts = fp.replace(/\\/g, '/').split('/')
+        const fileName = parts[parts.length - 1] || fp
+        const dotIdx = fileName.lastIndexOf('.')
+        const fileType = dotIdx !== -1 ? fileName.slice(dotIdx + 1).toLowerCase() : ''
+        await tx.attachment.create({
           data: {
-            quoteSheetId: quote.id,
-            supplierId: body.supplierId,
-            categoryId: body.categoryId,
-            compareKey: item.compareKey || item.productName,
-            productName: item.productName.trim(),
-            model: item.model || null,
-            unit: item.unit || null,
-            price: item.price !== undefined && item.price !== null && item.price !== '' ? item.price : null,
-            includesTax: item.includesTax ?? false,
-            taxRate: item.taxRate !== undefined && item.taxRate !== null && item.taxRate !== '' ? item.taxRate : null,
-            includesFreight: item.includesFreight ?? false,
-            minOrderQty: item.minOrderQty || null,
-            deliveryTime: item.deliveryTime || null,
-            paymentTerms: item.paymentTerms || null,
-            warranty: item.warranty || null,
-            priceNotes: item.priceNotes || null,
+            relatedType: 'QuoteSheet',
+            relatedId: createdQuote.id,
+            filePath: fp,
+            fileName,
+            fileType,
+            notes: body.fileNotes || null,
           },
         })
       }
-    }
 
-    // 创建附件记录（如果有 filePath）
-    if (body.filePath && body.filePath.trim()) {
-      const fp = body.filePath.trim()
-      const parts = fp.replace(/\\/g, '/').split('/')
-      const fileName = parts[parts.length - 1] || fp
-      const dotIdx = fileName.lastIndexOf('.')
-      const fileType = dotIdx !== -1 ? fileName.slice(dotIdx + 1).toLowerCase() : ''
-      await prisma.attachment.create({
-        data: {
-          relatedType: 'QuoteSheet',
-          relatedId: quote.id,
-          filePath: fp,
-          fileName,
-          fileType,
-          notes: body.fileNotes || null,
-        },
+      await tx.supplier.update({
+        where: { id: body.supplierId },
+        data: { hasQuoted: true },
       })
-    }
+
+      return createdQuote
+    })
 
     return NextResponse.json(quote, { status: 201 })
   } catch {

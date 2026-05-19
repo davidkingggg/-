@@ -7,11 +7,12 @@ import {
   type RowError,
 } from '@/lib/csv-utils'
 
-const VALID_COMPANY_TYPES = new Set(['厂家', '代理商', '经销商', '服务商', '安装公司', '其他'])
-const VALID_SOURCES = new Set(['展会', '网络', '老板推荐', '销售推荐', '供应商转介绍', '其他'])
+const MAX_TEXT_LENGTH = 100
 const VALID_COOPERATION = new Set(['强', '一般', '弱', '未确认'])
 const VALID_PRICE_LEVELS = new Set(['高', '中', '低', '未知'])
 const VALID_RECOMMENDED = new Set(['A优先推荐', 'B备选', 'C暂不推荐', '未评级'])
+const CATEGORY_HEADERS = ['品类', '主品类']
+const AUTO_CREATED_CATEGORY_NOTE = '供应商CSV导入自动创建'
 
 interface ParsedSupplierRow {
   rowNumber: number
@@ -40,15 +41,28 @@ interface ParsedSupplierRow {
   email: string | null
 }
 
+function rowError(row: number, field: string, value: string | undefined, reason: string, suggestion: string): RowError {
+  return { row, field, value: value ?? '', reason, suggestion, message: reason }
+}
+
+function validationFailure(message: string, errors: RowError[], status = 400) {
+  return NextResponse.json({
+    success: false,
+    message,
+    error: message,
+    errorCount: errors.length,
+    errors,
+  }, { status })
+}
+
 function parseRow(
   raw: Record<string, string>,
   rowNumber: number,
   csvInternalNames: Set<string>,
-  categoryMap: Map<string, string>,
   errors: RowError[]
 ): ParsedSupplierRow | null {
   const name = (raw['供应商名称'] ?? '').trim()
-  const categoryName = (raw['主品类'] ?? '').trim()
+  const categoryName = CATEGORY_HEADERS.map(header => raw[header]).find(value => value?.trim())?.trim() ?? ''
   const region = (raw['所在地区'] ?? '').trim() || null
   const companyType = (raw['公司性质'] ?? '').trim() || null
   const source = (raw['来源'] ?? '').trim() || null
@@ -83,19 +97,19 @@ function parseRow(
 
   // 主品类
   if (!categoryName) {
-    errors.push({ row: rowNumber, field: '主品类', value: '', reason: '主品类不能为空', suggestion: '请填写供应商所属品类' })
+    errors.push({ row: rowNumber, field: '品类', value: '', reason: '品类不能为空', suggestion: '请填写供应商所属品类' })
     hasError = true
   }
 
   // 公司性质
-  if (companyType && !VALID_COMPANY_TYPES.has(companyType)) {
-    errors.push({ row: rowNumber, field: '公司性质', value: companyType, reason: `公司性质必须为：${Array.from(VALID_COMPANY_TYPES).join('、')}`, suggestion: '请修改为有效公司性质或留空' })
+  if (companyType && companyType.length > MAX_TEXT_LENGTH) {
+    errors.push({ row: rowNumber, field: '公司性质', value: companyType, reason: `公司性质不能超过 ${MAX_TEXT_LENGTH} 个字符`, suggestion: '请缩短内容或留空' })
     hasError = true
   }
 
   // 来源
-  if (source && !VALID_SOURCES.has(source)) {
-    errors.push({ row: rowNumber, field: '来源', value: source, reason: `来源必须为：${Array.from(VALID_SOURCES).join('、')}`, suggestion: '请修改为有效来源或留空' })
+  if (source && source.length > MAX_TEXT_LENGTH) {
+    errors.push({ row: rowNumber, field: '来源', value: source, reason: `来源不能超过 ${MAX_TEXT_LENGTH} 个字符`, suggestion: '请缩短内容或留空' })
     hasError = true
   }
 
@@ -142,12 +156,6 @@ function parseRow(
     hasError = true
   }
 
-  // 品类存在性校验（后置，需要 categoryMap）
-  if (categoryName && !categoryMap.has(categoryName)) {
-    errors.push({ row: rowNumber, field: '主品类', value: categoryName, reason: `品类「${categoryName}」不存在或已归档`, suggestion: '请先在品类管理中添加该品类，或修改为已有品类名称' })
-    hasError = true
-  }
-
   if (hasError) return null
 
   if (name) csvInternalNames.add(name)
@@ -185,23 +193,31 @@ export async function POST(request: NextRequest) {
     const csvText = body.csvText
 
     if (!csvText || typeof csvText !== 'string') {
-      return NextResponse.json({ error: '请提供 CSV 文本内容' }, { status: 400 })
+      return validationFailure('请提供 CSV 文本内容', [
+        rowError(1, '文件', '', '请提供 CSV 文本内容', '请选择供应商 CSV 文件后重试'),
+      ])
     }
 
     const { headers, rows } = parseCSV(csvText)
     if (headers.length === 0 || rows.length === 0) {
-      return NextResponse.json({ error: 'CSV 内容为空或缺少表头' }, { status: 400 })
+      return validationFailure('CSV 内容为空或缺少表头', [
+        rowError(1, '表头', '', 'CSV 内容为空或缺少表头', '请使用最新供应商导入模板'),
+      ])
     }
 
     // 构建表头映射
     const headerIndex: Record<string, number> = {}
     headers.forEach((h, i) => { headerIndex[h] = i })
 
-    const requiredHeaders = ['供应商名称', '主品类']
-    for (const h of requiredHeaders) {
-      if (!(h in headerIndex)) {
-        return NextResponse.json({ error: `CSV 缺少必填表头「${h}」` }, { status: 400 })
-      }
+    if (!('供应商名称' in headerIndex)) {
+      return validationFailure('CSV 缺少必填表头「供应商名称」', [
+        rowError(1, '供应商名称', '', 'CSV 缺少必填表头「供应商名称」', '请在 CSV 表头中增加「供应商名称」列'),
+      ])
+    }
+    if (!CATEGORY_HEADERS.some(header => header in headerIndex)) {
+      return validationFailure('CSV 缺少必填表头「品类」', [
+        rowError(1, '品类', '', 'CSV 缺少必填表头「品类」', '请在 CSV 表头中增加「品类」列'),
+      ])
     }
 
     // 预加载所有活跃品类
@@ -231,7 +247,7 @@ export async function POST(request: NextRequest) {
       for (const [header, idx] of Object.entries(headerIndex)) {
         raw[header] = rows[i][idx] ?? ''
       }
-      const result = parseRow(raw, i + 2, csvInternalNames, categoryMap, errors)
+      const result = parseRow(raw, i + 2, csvInternalNames, errors)
       if (result) {
         // 检查系统已有同名供应商
         if (existingNames.has(result.name)) {
@@ -269,7 +285,18 @@ export async function POST(request: NextRequest) {
 
     await prisma.$transaction(async (tx) => {
       for (const p of parsed) {
-        const categoryId = categoryMap.get(p.categoryName)!
+        let categoryId = categoryMap.get(p.categoryName)
+        if (!categoryId) {
+          const category = await tx.category.create({
+            data: {
+              name: p.categoryName,
+              notes: AUTO_CREATED_CATEGORY_NOTE,
+            },
+            select: { id: true, name: true },
+          })
+          categoryId = category.id
+          categoryMap.set(category.name, category.id)
+        }
 
         const supplier = await tx.supplier.create({
           data: {
@@ -320,6 +347,8 @@ export async function POST(request: NextRequest) {
       suppliers: created,
     })
   } catch {
-    return NextResponse.json({ error: '供应商导入失败' }, { status: 500 })
+    return validationFailure('供应商导入失败', [
+      rowError(1, '文件', '', '供应商导入失败', '请稍后重试，或检查 CSV 文件内容是否符合模板'),
+    ], 500)
   }
 }

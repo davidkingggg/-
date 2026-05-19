@@ -87,12 +87,12 @@ export default function ScoresPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">供应商评分</h1>
-          <p className="text-sm text-gray-500 mt-1">自动计算得分与推荐等级，提供客观决策依据</p>
+          <h1 className="text-[22px] font-bold text-[#0f172a]">供应商评分</h1>
+          <p className="text-[13px] text-slate-400 mt-0.5">自动计算得分与推荐等级，提供客观决策依据</p>
         </div>
         <Link
           href="/scores/new"
-          className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm inline-block"
+          className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm inline-block"
         >
           + 新增评分
         </Link>
@@ -102,7 +102,7 @@ export default function ScoresPage() {
         <select
           value={filterSupplier}
           onChange={(e) => setFilterSupplier(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部供应商</option>
           {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -110,7 +110,7 @@ export default function ScoresPage() {
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部品类</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -118,14 +118,14 @@ export default function ScoresPage() {
         <select
           value={filterFinalLevel}
           onChange={(e) => setFilterFinalLevel(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部评级</option>
           {LEVEL_OPTIONS.map(l => <option key={l} value={l}>{l}</option>)}
         </select>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="rounded-[20px] bg-white border border-[#e5eaf3] overflow-hidden" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
         {loading ? (
           <div className="text-center text-gray-400 py-16">加载中...</div>
         ) : scores.length === 0 ? (
@@ -134,46 +134,46 @@ export default function ScoresPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left px-6 py-3.5 font-semibold text-gray-600">日期</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-gray-600">供应商</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-gray-600">品类</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-gray-600">总分</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-gray-600">系统等级</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-gray-600">最终等级</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-gray-600">评分人</th>
-                  <th className="text-right px-6 py-3.5 font-semibold text-gray-600">操作</th>
+                <tr className="bg-[#f8fafc] border-b border-[#e5eaf3]">
+                  <th className="text-left px-6 h-[52px] text-[13px] font-bold text-[#475569]">日期</th>
+                  <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">供应商</th>
+                  <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">品类</th>
+                  <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">总分</th>
+                  <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">系统等级</th>
+                  <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">最终等级</th>
+                  <th className="text-left px-4 h-[52px] text-[13px] font-bold text-[#475569]">评分人</th>
+                  <th className="text-right px-6 h-[52px] text-[13px] font-bold text-[#475569]">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {scores.map((s) => (
-                  <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 text-gray-600">{new Date(s.scoreDate).toLocaleDateString()}</td>
-                    <td className="px-4 py-4 font-medium text-gray-800">
+                  <tr key={s.id} className="border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#f8fafc] transition-colors">
+                    <td className="px-6 h-[58px] text-[14px] text-[#475569]">{new Date(s.scoreDate).toLocaleDateString()}</td>
+                    <td className="px-4 h-[58px] text-[14px] font-bold text-[#0f172a]">
                       <Link href={`/suppliers/${s.supplierId}`} className="hover:text-blue-600 transition-colors">
                         {s.supplier.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-4 text-gray-600">{s.category.name}</td>
-                    <td className="px-4 py-4 font-medium text-gray-800">{Number(s.totalScore).toFixed(1)}</td>
-                    <td className="px-4 py-4 text-gray-600">{s.systemLevel}</td>
+                    <td className="px-4 h-[58px] text-[14px] text-[#475569]">{s.category.name}</td>
+                    <td className="px-4 h-[58px] text-[14px] font-bold text-[#0f172a]">{Number(s.totalScore).toFixed(1)}</td>
+                    <td className="px-4 h-[58px] text-[14px] text-[#475569]">{s.systemLevel}</td>
                     <td className="px-4 py-4">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${recColors[s.finalLevel] || ''}`}>
+                      <span className={`inline-flex items-center h-6 px-2.5 rounded-full text-[12px] font-semibold ${recColors[s.finalLevel] || ''}`}>
                         {s.finalLevel}
                       </span>
                       {s.manualLevel && <span className="ml-2 text-xs text-orange-500">(手动调整)</span>}
                     </td>
-                    <td className="px-4 py-4 text-gray-600">{s.scorer.name}</td>
+                    <td className="px-4 h-[58px] text-[14px] text-[#475569]">{s.scorer.name}</td>
                     <td className="px-6 py-4 text-right whitespace-nowrap">
                       <Link
                         href={`/scores/${s.id}/edit`}
-                        className="text-blue-600 hover:text-blue-800 mr-3 text-xs font-medium"
+                        className="text-[13px] font-semibold text-[#2563eb] hover:text-blue-800 mr-4"
                       >
                         编辑
                       </Link>
                       <button
                         onClick={() => setArchiveTarget(s)}
-                        className="text-red-500 hover:text-red-700 text-xs font-medium"
+                        className="text-[13px] font-semibold text-[#ef4444] hover:text-red-700"
                       >
                         归档
                       </button>

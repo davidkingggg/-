@@ -234,23 +234,23 @@ export default function SalesMaterialsPage() {
     <div className="p-6">
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">销售/商务资料</h1>
-          <p className="mt-1 text-sm text-gray-600">管理面向销售和商务支持的正式对外资料正文。</p>
+          <h1 className="text-[22px] font-bold text-[#0f172a]">销售/商务资料</h1>
+          <p className="text-[13px] text-slate-400 mt-0.5">管理面向销售和商务支持的正式对外资料正文。</p>
         </div>
         <button
           type="button"
           onClick={openCreate}
-          className="w-fit rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700"
+          className="w-fit h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm"
         >
           新增资料
         </button>
       </div>
 
-      <div className="mb-4 grid gap-3 rounded-lg border border-gray-100 bg-white p-4 shadow-sm lg:grid-cols-[1fr_1fr_2fr_auto_auto_auto]">
+      <div className="mb-4 grid gap-3 rounded-[20px] border border-[#e5eaf3] bg-white p-4 lg:grid-cols-[1fr_1fr_2fr_auto_auto_auto]" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
         <select
           value={filterCategoryId}
           onChange={(event) => setFilterCategoryId(event.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部品类</option>
           {categories.map((category) => (
@@ -260,7 +260,7 @@ export default function SalesMaterialsPage() {
         <select
           value={filterTargetAudience}
           onChange={(event) => setFilterTargetAudience(event.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部目标对象</option>
           {TARGET_AUDIENCES.map((audience) => (
@@ -271,12 +271,12 @@ export default function SalesMaterialsPage() {
           value={filterKeyword}
           onChange={(event) => setFilterKeyword(event.target.value)}
           placeholder="输入关键词搜索资料内容"
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         />
         <button
           type="button"
           onClick={resetFilters}
-          className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium"
         >
           重置筛选
         </button>
@@ -294,7 +294,7 @@ export default function SalesMaterialsPage() {
         </a>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-[20px] border border-[#e5eaf3] bg-white" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
         {loading ? (
           <div className="py-16 text-center text-sm text-gray-400">加载中...</div>
         ) : materials.length === 0 ? (
@@ -302,56 +302,56 @@ export default function SalesMaterialsPage() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="px-6 py-3.5 text-left font-semibold text-gray-600">资料名称</th>
-                <th className="px-4 py-3.5 text-left font-semibold text-gray-600">品类</th>
-                <th className="px-4 py-3.5 text-left font-semibold text-gray-600">目标对象</th>
-                <th className="px-4 py-3.5 text-left font-semibold text-gray-600">核心卖点</th>
-                <th className="px-4 py-3.5 text-left font-semibold text-gray-600">更新时间</th>
-                <th className="px-6 py-3.5 text-right font-semibold text-gray-600">操作</th>
+              <tr className="bg-[#f8fafc] border-b border-[#e5eaf3]">
+                <th className="px-6 h-[52px] text-left text-[13px] font-bold text-[#475569]">资料名称</th>
+                <th className="px-4 h-[52px] text-left text-[13px] font-bold text-[#475569]">品类</th>
+                <th className="px-4 h-[52px] text-left text-[13px] font-bold text-[#475569]">目标对象</th>
+                <th className="px-4 h-[52px] text-left text-[13px] font-bold text-[#475569]">核心卖点</th>
+                <th className="px-4 h-[52px] text-left text-[13px] font-bold text-[#475569]">更新时间</th>
+                <th className="px-6 h-[52px] text-right text-[13px] font-bold text-[#475569]">操作</th>
               </tr>
             </thead>
             <tbody>
               {materials.map((material) => (
-                <tr key={material.id} className="border-b border-gray-50 transition-colors hover:bg-gray-50/70">
-                  <td className="px-6 py-4 font-medium text-gray-900">{material.title}</td>
-                  <td className="px-4 py-4 text-gray-600">{material.category?.name || '-'}</td>
-                  <td className="px-4 py-4">
+                <tr key={material.id} className="border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#f8fafc]">
+                  <td className="px-6 h-[58px] text-[14px] font-bold text-[#0f172a]">{material.title}</td>
+                  <td className="px-4 h-[58px] text-gray-600">{material.category?.name || '-'}</td>
+                  <td className="px-4 h-[58px]">
                     <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
                       {textOrDash(material.targetAudience)}
                     </span>
                   </td>
-                  <td className="max-w-xs px-4 py-4 text-gray-600">
+                  <td className="max-w-xs px-4 h-[58px] text-gray-600">
                     <span className="line-clamp-2">{textOrDash(material.coreSellingPoints)}</span>
                   </td>
-                  <td className="px-4 py-4 text-gray-500">{formatDate(material.updatedAt)}</td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-4 h-[58px] text-gray-500">{formatDate(material.updatedAt)}</td>
+                  <td className="px-6 h-[58px] text-right">
                     <div className="flex flex-wrap justify-end gap-2">
                       <button
                         type="button"
                         onClick={() => setPreviewTarget(material)}
-                        className="text-sm font-medium text-slate-600 hover:text-slate-800"
+                        className="text-[13px] font-semibold text-slate-600 hover:text-slate-800"
                       >
                         预览
                       </button>
                       <button
                         type="button"
                         onClick={() => copyFormalText(material)}
-                        className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
+                        className="text-[13px] font-semibold text-emerald-600 hover:text-emerald-700"
                       >
                         复制正文
                       </button>
                       <button
                         type="button"
                         onClick={() => openEdit(material)}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                        className="text-[13px] font-semibold text-[#2563eb] hover:text-blue-700"
                       >
                         编辑
                       </button>
                       <button
                         type="button"
                         onClick={() => setArchiveTarget(material)}
-                        className="text-sm font-medium text-red-600 hover:text-red-700"
+                        className="text-[13px] font-semibold text-[#ef4444] hover:text-red-700"
                       >
                         归档
                       </button>
@@ -377,7 +377,7 @@ export default function SalesMaterialsPage() {
               <input
                 value={form.title}
                 onChange={(event) => updateForm('title', event.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 placeholder="例如：阀门客户沟通资料"
               />
             </label>
@@ -386,7 +386,7 @@ export default function SalesMaterialsPage() {
               <select
                 value={form.categoryId}
                 onChange={(event) => updateForm('categoryId', event.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 <option value="">请选择品类</option>
                 {categories.map((category) => (
@@ -399,7 +399,7 @@ export default function SalesMaterialsPage() {
               <select
                 value={form.targetAudience}
                 onChange={(event) => updateForm('targetAudience', event.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 {TARGET_AUDIENCES.map((audience) => (
                   <option key={audience} value={audience}>{audience}</option>
@@ -430,14 +430,14 @@ export default function SalesMaterialsPage() {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="rounded-lg bg-gray-100 px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-200"
+              className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium"
             >
               取消
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving ? '保存中...' : '保存资料'}
             </button>
@@ -466,7 +466,7 @@ export default function SalesMaterialsPage() {
               <button
                 type="button"
                 onClick={() => copyFormalText(previewTarget)}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm"
               >
                 复制正式正文
               </button>
@@ -508,7 +508,7 @@ function TextareaField({
         onChange={(event) => onChange(event.target.value)}
         rows={rows}
         placeholder={placeholder}
-        className="w-full resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm leading-6 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+        className="w-full resize-y h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
       />
     </label>
   )

@@ -176,8 +176,8 @@ export default function DataQualityPage() {
     <div className="space-y-6 p-6">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">数据质量检查</h1>
-          <p className="mt-1 text-sm text-gray-600">集中查看供应商、报价、流程和资料中的数据问题。本页只读展示，不会自动修改数据。</p>
+          <h1 className="text-[22px] font-bold text-[#0f172a]">数据质量检查</h1>
+          <p className="text-[13px] text-slate-400 mt-0.5">集中查看供应商、报价、流程和资料中的数据问题。本页只读展示，不会自动修改数据。</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="text-sm text-gray-500">生成时间：{formatDateTime(data.summary.generatedAt)}</div>
@@ -199,11 +199,11 @@ export default function DataQualityPage() {
         <SummaryCard label="低风险" value={data.summary.lowCount} tone="blue" />
       </div>
 
-      <div className="grid gap-3 rounded-lg border border-gray-100 bg-white p-4 shadow-sm lg:grid-cols-[1.4fr_1fr_1fr_0.8fr_auto]">
+      <div className="grid gap-3 rounded-[20px] border border-[#e5eaf3] bg-white p-4 lg:grid-cols-[1.4fr_1fr_1fr_0.8fr_auto]" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
         <select
           value={check}
           onChange={(event) => setCheck(event.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部检查项</option>
           {CHECK_OPTIONS.map((option) => (
@@ -213,7 +213,7 @@ export default function DataQualityPage() {
         <select
           value={severity}
           onChange={(event) => setSeverity(event.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部风险</option>
           <option value="high">高风险</option>
@@ -223,7 +223,7 @@ export default function DataQualityPage() {
         <select
           value={categoryId}
           onChange={(event) => setCategoryId(event.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="">全部品类</option>
           {categories.map((category) => (
@@ -233,7 +233,7 @@ export default function DataQualityPage() {
         <select
           value={limit}
           onChange={(event) => setLimit(event.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
         >
           <option value="20">每类 20 条</option>
           <option value="50">每类 50 条</option>
@@ -243,7 +243,7 @@ export default function DataQualityPage() {
         <button
           type="button"
           onClick={resetFilters}
-          className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+          className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium"
         >
           重置筛选
         </button>
@@ -258,14 +258,14 @@ export default function DataQualityPage() {
       {error && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
 
       {loading ? (
-        <div className="rounded-lg border border-gray-100 bg-white p-10 text-center text-sm text-gray-500 shadow-sm">数据质量检查加载中...</div>
+        <div className="rounded-[20px] border border-[#e5eaf3] bg-white p-10 text-center text-sm text-gray-500" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>数据质量检查加载中...</div>
       ) : data.checks.length === 0 ? (
-        <div className="rounded-lg border border-gray-100 bg-white p-10 text-center text-sm text-gray-500 shadow-sm">当前筛选条件下暂无检查项。</div>
+        <div className="rounded-[20px] border border-[#e5eaf3] bg-white p-10 text-center text-sm text-gray-500" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>当前筛选条件下暂无检查项。</div>
       ) : (
         <div className="space-y-5">
           {data.checks.map((checkResult) => (
-            <section key={checkResult.key} className="overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
-              <div className="border-b border-gray-100 bg-gray-50 px-5 py-4">
+            <section key={checkResult.key} className="overflow-hidden rounded-[20px] border border-[#e5eaf3] bg-white" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
+              <div className="border-b border-[#e5eaf3] bg-[#f8fafc] px-5 py-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -293,7 +293,7 @@ export default function DataQualityPage() {
               )}
 
               {checkResult.hasMore && (
-                <div className="border-t border-gray-100 bg-amber-50 px-5 py-3 text-sm text-amber-700">
+                <div className="border-t border-[#e5eaf3] bg-amber-50 px-5 py-3 text-sm text-amber-700">
                   该检查项还有更多问题未显示，可调高每类显示数量继续查看。
                 </div>
               )}
@@ -314,7 +314,7 @@ function SummaryCard({ label, value, tone }: { label: string; value: number; ton
   }[tone]
 
   return (
-    <div className="rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
+    <div className="rounded-[20px] border border-[#e5eaf3] bg-white p-4" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
       <div className="text-sm text-gray-500">{label}</div>
       <div className={`mt-3 inline-flex min-w-16 justify-center rounded-lg px-3 py-1.5 text-2xl font-bold ${toneClass}`}>
         {value}
