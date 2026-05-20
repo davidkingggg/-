@@ -161,6 +161,22 @@ export default function QuotesPage() {
     downloadBlob(content, `quote_import_errors_${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8')
   }
 
+  async function readCSVFileText(file: File) {
+    const bytes = new Uint8Array(await file.arrayBuffer())
+    const utf8Text = new TextDecoder('utf-8').decode(bytes)
+    const utf8ChineseCount = (utf8Text.match(/[\u4E00-\u9FA5]/g) ?? []).length
+
+    if (utf8ChineseCount >= 10 && !utf8Text.includes('\uFFFD')) return utf8Text
+
+    try {
+      const gbkText = new TextDecoder('gbk').decode(bytes)
+      const gbkChineseCount = (gbkText.match(/[\u4E00-\u9FA5]/g) ?? []).length
+      return gbkChineseCount > utf8ChineseCount ? gbkText : utf8Text
+    } catch {
+      return utf8Text
+    }
+  }
+
   async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -169,7 +185,7 @@ export default function QuotesPage() {
     setImportResult(null)
 
     try {
-      const text = await file.text()
+      const text = await readCSVFileText(file)
       const res = await fetch('/api/quotes/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
