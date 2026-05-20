@@ -68,6 +68,13 @@ if ! git -C "$LOCAL_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 1
 fi
 
+for forbidden_path in .env .env.local .env.deploy prisma/dev.db prisma/dev.db-wal prisma/dev.db-shm; do
+  if git -C "$LOCAL_ROOT" ls-files --error-unmatch "$forbidden_path" >/dev/null 2>&1; then
+    echo "Refusing to deploy tracked sensitive or local data file: $forbidden_path" >&2
+    exit 1
+  fi
+done
+
 echo "Creating upload package from git HEAD: $LOCAL_RELEASE"
 git -C "$LOCAL_ROOT" archive --format=tar HEAD | gzip > "$LOCAL_RELEASE"
 
