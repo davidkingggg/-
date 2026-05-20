@@ -21,6 +21,7 @@ set -Eeuo pipefail
 #   APP_SERVICE       systemd app service to restart and verify.
 #   WEB_SERVICE       second systemd service to verify, usually nginx.
 #   LICENSE_SERVICE   license service to verify.
+#   APP_PORT          Local port used by the standalone Next.js service.
 #   BASE_URL          Public nginx URL used for endpoint verification.
 #   SUDO_PASSWORD     Optional sudo password for servers without passwordless sudo.
 
@@ -38,6 +39,7 @@ REMOTE_APP_BACKUP_DIR="${REMOTE_APP_BACKUP_DIR:-$REMOTE_DATA_DIR/releases}"
 APP_SERVICE="${APP_SERVICE:-personal-workship.service}"
 WEB_SERVICE="${WEB_SERVICE:-nginx.service}"
 LICENSE_SERVICE="${LICENSE_SERVICE:-mimo-license.service}"
+APP_PORT="${APP_PORT:-3002}"
 BASE_URL="${BASE_URL:-http://127.0.0.1}"
 SUDO_PASSWORD="${SUDO_PASSWORD:-}"
 
@@ -114,7 +116,7 @@ scp "${SCP_ARGS[@]}" "$LOCAL_RELEASE" "$remote:$REMOTE_RELEASE"
 
 echo "Installing, migrating, rebuilding, and restarting systemd service"
 ssh "${SSH_ARGS[@]}" "$remote" \
-  "REMOTE_RELEASE='$REMOTE_RELEASE' REMOTE_APP_DIR='$REMOTE_APP_DIR' REMOTE_DATA_DIR='$REMOTE_DATA_DIR' REMOTE_DB_PATH='$REMOTE_DB_PATH' APP_SERVICE='$APP_SERVICE' BASE_URL='$BASE_URL' SUDO_PASSWORD='$SUDO_PASSWORD' bash -s" <<'REMOTE_DEPLOY'
+  "REMOTE_RELEASE='$REMOTE_RELEASE' REMOTE_APP_DIR='$REMOTE_APP_DIR' REMOTE_DATA_DIR='$REMOTE_DATA_DIR' REMOTE_DB_PATH='$REMOTE_DB_PATH' APP_SERVICE='$APP_SERVICE' APP_PORT='$APP_PORT' BASE_URL='$BASE_URL' SUDO_PASSWORD='$SUDO_PASSWORD' bash -s" <<'REMOTE_DEPLOY'
 set -Eeuo pipefail
 
 run_sudo() {
@@ -172,6 +174,28 @@ ensure_runtime_database_link() {
   fi
 }
 
+write_systemd_helper_scripts() {
+  cat > "$REMOTE_APP_DIR/migrate-workship.sh" <<SCRIPT
+#!/usr/bin/env bash
+set -Eeuo pipefail
+cd "$REMOTE_APP_DIR"
+export DATABASE_URL="file:$REMOTE_DB_PATH"
+npx prisma migrate deploy
+SCRIPT
+
+  cat > "$REMOTE_APP_DIR/run-workship.sh" <<SCRIPT
+#!/usr/bin/env bash
+set -Eeuo pipefail
+cd "$REMOTE_APP_DIR/.next/standalone"
+export NODE_ENV="production"
+export HOSTNAME="\${HOSTNAME:-127.0.0.1}"
+export PORT="\${PORT:-$APP_PORT}"
+exec node server.js
+SCRIPT
+
+  chmod +x "$REMOTE_APP_DIR/migrate-workship.sh" "$REMOTE_APP_DIR/run-workship.sh"
+}
+
 mkdir -p "$REMOTE_APP_DIR"
 ensure_persistent_database
 find "$REMOTE_APP_DIR" -mindepth 1 -maxdepth 1 ! -name '.env' -exec rm -rf {} +
@@ -207,6 +231,7 @@ rm -rf .next/standalone/.next/static
 cp -R .next/static .next/standalone/.next/static
 cp .env .next/standalone/.env
 ensure_runtime_database_link
+write_systemd_helper_scripts
 
 run_sudo systemctl restart "$APP_SERVICE"
 run_sudo systemctl --no-pager --full status "$APP_SERVICE"
