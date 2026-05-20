@@ -209,6 +209,9 @@ export async function restoreBackup(
 
   const before = await buildDataHealthReport(databasePath)
   const backup = await summarizeDatabaseFile(backupPath)
+  if (backup.adminCount < 1) {
+    assertError('备份库没有可用管理员账号，已停止恢复。')
+  }
   const beforeRestore = await createBackup(BEFORE_RESTORE_PREFIX)
   if (beforeReplace) await beforeReplace()
   await copyFile(backupPath, databasePath)
@@ -216,6 +219,9 @@ export async function restoreBackup(
 
   if (after.adminCount < 1) {
     assertError('恢复后的数据库没有可用管理员账号，请改用包含管理员账号的备份。')
+  }
+  if (!after.exists || after.size === null || after.size <= 0) {
+    assertError('恢复后的数据库文件不可用，已停止。')
   }
 
   return {

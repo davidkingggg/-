@@ -1,11 +1,12 @@
 import { constants } from 'fs'
-import { access, readFile, stat } from 'fs/promises'
+import { access, readFile, realpath, stat } from 'fs/promises'
 import path from 'path'
 import { PrismaClient } from '@prisma/client'
 
 export interface DatabaseStatus {
   exists: boolean
   path: string
+  realPath: string | null
   size: number | null
   updatedAt: string | null
   journalFiles: string[]
@@ -143,13 +144,14 @@ export async function getDatabaseStatus(databasePath?: string): Promise<Database
   const warnings = journalFiles.length > 0 ? [SQLITE_JOURNAL_WARNING] : []
 
   if (!exists) {
-    return { exists, path: resolvedPath, size: null, updatedAt: null, journalFiles, warnings }
+    return { exists, path: resolvedPath, realPath: null, size: null, updatedAt: null, journalFiles, warnings }
   }
 
-  const databaseStat = await stat(resolvedPath)
+  const [databaseStat, databaseRealPath] = await Promise.all([stat(resolvedPath), realpath(resolvedPath)])
   return {
     exists,
     path: resolvedPath,
+    realPath: databaseRealPath,
     size: databaseStat.size,
     updatedAt: databaseStat.mtime.toISOString(),
     journalFiles,
