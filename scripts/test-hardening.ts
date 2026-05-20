@@ -119,6 +119,7 @@ const checks: Check[] = [
         'write_systemd_helper_scripts',
         'migrate-workship.sh',
         'run-workship.sh',
+        'export HOSTNAME="127.0.0.1"',
         'chmod +x "$REMOTE_APP_DIR/migrate-workship.sh" "$REMOTE_APP_DIR/run-workship.sh"',
         'OK runtime database links',
         'OK _next/static',

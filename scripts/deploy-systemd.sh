@@ -188,7 +188,7 @@ SCRIPT
 set -Eeuo pipefail
 cd "$REMOTE_APP_DIR/.next/standalone"
 export NODE_ENV="production"
-export HOSTNAME="\${HOSTNAME:-127.0.0.1}"
+export HOSTNAME="127.0.0.1"
 export PORT="\${PORT:-$APP_PORT}"
 exec node server.js
 SCRIPT
