@@ -1,4 +1,6 @@
 #!/bin/bash
+# DEPRECATED: Docker-based deployment is retained for historical reference only.
+# The current deployment standard is scripts/deploy-systemd.sh.
 set -e
 
 APP_DIR="/opt/workship"

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { hashPassword } from '@/lib/auth-utils'
+import { hashPassword, validatePasswordPolicy } from '@/lib/auth-utils'
 
 function normalizeText(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
@@ -22,8 +22,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '请填写完整的用户名、密码和姓名' }, { status: 400 })
     }
 
-    if (password.length < 6) {
-      return NextResponse.json({ error: '密码至少 6 位' }, { status: 400 })
+    const passwordError = validatePasswordPolicy(password)
+    if (passwordError) {
+      return NextResponse.json({ error: passwordError }, { status: 400 })
     }
 
     const passwordHash = await hashPassword(password)

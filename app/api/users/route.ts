@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { hashPassword, requireAdmin } from '@/lib/auth-utils'
-
-const ADMIN_ERROR = '需要管理员权限'
+import { ADMIN_ERROR, hashPassword, isAdminError, requireAdmin, validatePasswordPolicy } from '@/lib/auth-utils'
 
 function normalizeText(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
-}
-
-function isAdminError(error: unknown): boolean {
-  return error instanceof Error && error.message === ADMIN_ERROR
 }
 
 export async function GET() {
@@ -41,8 +35,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '请填写用户名、密码和姓名' }, { status: 400 })
     }
 
-    if (password.length < 6) {
-      return NextResponse.json({ error: '密码至少 6 位' }, { status: 400 })
+    const passwordError = validatePasswordPolicy(password)
+    if (passwordError) {
+      return NextResponse.json({ error: passwordError }, { status: 400 })
     }
 
     const existing = await prisma.user.findUnique({ where: { username } })

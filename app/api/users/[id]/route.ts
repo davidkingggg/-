@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { hashPassword, requireAdmin } from '@/lib/auth-utils'
-
-const ADMIN_ERROR = '需要管理员权限'
+import { ADMIN_ERROR, hashPassword, isAdminError, requireAdmin, validatePasswordPolicy } from '@/lib/auth-utils'
 
 function normalizeOptionalText(value: unknown): string | undefined {
   return value === undefined ? undefined : typeof value === 'string' ? value.trim() : ''
 }
 
-function isAdminError(error: unknown): boolean {
-  return error instanceof Error && error.message === ADMIN_ERROR
+async function isLastActiveAdmin(userId: string): Promise<boolean> {
+  const enabledAdminCount = await prisma.user.count({
+    where: { isAdmin: true, isActive: true },
+  })
+  if (enabledAdminCount !== 1) return false
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isAdmin: true, isActive: true },
+  })
+
+  return user?.isAdmin === true && user.isActive === true
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -38,12 +46,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (typeof body.isAdmin !== 'boolean') {
         return NextResponse.json({ error: '管理员状态必须是布尔值' }, { status: 400 })
       }
+      if (body.isAdmin === false && (await isLastActiveAdmin(id))) {
+        return NextResponse.json({ error: '不能降级最后一个启用管理员' }, { status: 400 })
+      }
       data.isAdmin = body.isAdmin
     }
 
     if (password !== undefined && password) {
-      if (password.length < 6) {
-        return NextResponse.json({ error: '密码至少 6 位' }, { status: 400 })
+      const passwordError = validatePasswordPolicy(password)
+      if (passwordError) {
+        return NextResponse.json({ error: passwordError }, { status: 400 })
       }
       data.passwordHash = await hashPassword(password)
     }
@@ -65,7 +77,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin()
+    const currentAdmin = await requireAdmin()
     const { id } = await params
     const { isActive } = await request.json()
 
@@ -76,6 +88,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const user = await prisma.user.findUnique({ where: { id } })
     if (!user) {
       return NextResponse.json({ error: '用户不存在' }, { status: 404 })
+    }
+
+    if (isActive === false && currentAdmin.id === id) {
+      return NextResponse.json({ error: '不能停用自己' }, { status: 400 })
+    }
+
+    if (isActive === false && (await isLastActiveAdmin(id))) {
+      return NextResponse.json({ error: '不能停用最后一个启用管理员' }, { status: 400 })
     }
 
     const updated = await prisma.user.update({

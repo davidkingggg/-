@@ -1,3 +1,5 @@
+# DEPRECATED: Docker deployment is retained for historical reference only.
+# The current deployment standard is scripts/deploy-systemd.sh.
 FROM node:20-alpine AS base
 
 # Install dependencies only

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { ADMIN_ERROR, isAdminError, requireAdmin } from '@/lib/auth-utils'
 
 type PrismaDelegate = {
   delete: (args: { where: Record<string, unknown> }) => Promise<unknown>
@@ -131,6 +132,8 @@ async function collectCascadeChildren(items: DeleteItem[]): Promise<DeleteItem[]
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAdmin()
+
     const body = await request.json()
     const items: DeleteItem[] = body.items
 
@@ -206,7 +209,10 @@ export async function POST(request: NextRequest) {
       cascade: cascadeCount,
       message: messageParts.join(''),
     })
-  } catch {
+  } catch (error) {
+    if (isAdminError(error)) {
+      return NextResponse.json({ error: ADMIN_ERROR }, { status: 403 })
+    }
     return NextResponse.json({ error: '批量删除失败' }, { status: 500 })
   }
 }
