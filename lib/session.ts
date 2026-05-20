@@ -16,13 +16,19 @@ function getSessionPassword(): string {
   return password || 'local-dev-only-change-this-in-production-32chars!!'
 }
 
+function shouldUseSecureCookies(): boolean {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL
+  if (appUrl) return appUrl.startsWith('https://')
+  return process.env.NODE_ENV === 'production' && process.env.FORCE_SECURE_COOKIES === 'true'
+}
+
 export function getSessionOptions(): SessionOptions {
   return {
     password: getSessionPassword(),
     cookieName: 'gcy_session',
     cookieOptions: {
       maxAge: 60 * 60 * 24 * 7, // 7 days
-      secure: process.env.NODE_ENV === 'production',
+      secure: shouldUseSecureCookies(),
     },
   }
 }
