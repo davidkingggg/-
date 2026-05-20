@@ -27,6 +27,9 @@
 - **登录保护**:
   - 新增 `proxy.ts`，统一拦截未登录访问的页面和 API 请求。
   - `/api/tasks`、`/api/dashboard`、`/api/boss-report` 等聚合接口改为按当前登录态返回数据。
+- **部署脚本硬化**:
+  - 发布包改为基于 `git HEAD` 生成，避免无关工作区改动混入生产包。
+  - 远端解包前清理旧应用文件，并强制验证 `_next/static` 资源、`personal-workship.service`、`nginx.service` 和 `mimo-license.service`。
 
 ## [0.9.4] - 2026-05-11
 

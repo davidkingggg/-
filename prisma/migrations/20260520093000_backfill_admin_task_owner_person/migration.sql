@@ -90,42 +90,8 @@ WHERE "User"."id" = (
       )
   );
 
-UPDATE "User"
-SET "personId" = (
-  SELECT "Person"."id"
-  FROM "Person"
-  WHERE "Person"."isActive" = 1
-    AND NOT EXISTS (
-      SELECT 1
-      FROM "User" AS "BoundUser"
-      WHERE "BoundUser"."personId" = "Person"."id"
-        AND "BoundUser"."id" <> "User"."id"
-    )
-  ORDER BY "Person"."createdAt" ASC
-  LIMIT 1
-)
-WHERE "User"."id" = (
-    SELECT "PrimaryAdmin"."id"
-    FROM "User" AS "PrimaryAdmin"
-    WHERE "PrimaryAdmin"."isAdmin" = 1
-      AND "PrimaryAdmin"."isActive" = 1
-    ORDER BY "PrimaryAdmin"."createdAt" ASC
-    LIMIT 1
-  )
-  AND "User"."personId" IS NULL
-  AND EXISTS (
-    SELECT 1
-    FROM "Person"
-    WHERE "Person"."isActive" = 1
-      AND NOT EXISTS (
-        SELECT 1
-        FROM "User" AS "BoundUser"
-        WHERE "BoundUser"."personId" = "Person"."id"
-          AND "BoundUser"."id" <> "User"."id"
-      )
-  );
-
--- Backfill legacy personal admin tasks to the primary bound administrator.
+-- Backfill legacy personal admin tasks only after a deterministic binding
+-- exists. Ambiguous databases are left for an administrator to bind manually.
 UPDATE "AdminTask"
 SET "ownerPersonId" = (
   SELECT "User"."personId"

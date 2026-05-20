@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { ADMIN_ERROR, hashPassword, isAdminError, requireAdmin, validatePasswordPolicy } from '@/lib/auth-utils'
-import { ensureLegacyAdminTasksAssigned } from '@/lib/admin-task-auth'
 import { normalizePersonIdInput, validatePersonBinding } from '@/lib/user-person-binding'
 
 function normalizeText(value: unknown): string {
@@ -76,8 +75,6 @@ export async function POST(request: NextRequest) {
         person: { select: { id: true, name: true } },
       },
     })
-
-    await ensureLegacyAdminTasksAssigned()
 
     return NextResponse.json(user, { status: 201 })
   } catch (error) {

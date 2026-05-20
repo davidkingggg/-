@@ -20,6 +20,7 @@ set -Eeuo pipefail
 #   REMOTE_APP_BACKUP_DIR  Previous app snapshots used for manual rollback.
 #   APP_SERVICE       systemd app service to restart and verify.
 #   WEB_SERVICE       second systemd service to verify, usually nginx.
+#   LICENSE_SERVICE   license service to verify.
 #   BASE_URL          Public nginx URL used for endpoint verification.
 #   SUDO_PASSWORD     Optional sudo password for servers without passwordless sudo.
 
@@ -36,6 +37,7 @@ REMOTE_DB_PATH="${REMOTE_DB_PATH:-/home/ubuntu/personal-workship-data/dev.db}"
 REMOTE_APP_BACKUP_DIR="${REMOTE_APP_BACKUP_DIR:-$REMOTE_DATA_DIR/releases}"
 APP_SERVICE="${APP_SERVICE:-personal-workship.service}"
 WEB_SERVICE="${WEB_SERVICE:-nginx.service}"
+LICENSE_SERVICE="${LICENSE_SERVICE:-mimo-license.service}"
 BASE_URL="${BASE_URL:-http://127.0.0.1}"
 SUDO_PASSWORD="${SUDO_PASSWORD:-}"
 
@@ -61,24 +63,13 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "Creating upload package: $LOCAL_RELEASE"
-tar \
-  --exclude='.git' \
-  --exclude='.next' \
-  --exclude='node_modules' \
-  --exclude='.claude' \
-  --exclude='.vscode' \
-  --exclude='.codex-dev-*' \
-  --exclude='*.log' \
-  --exclude='.env' \
-  --exclude='.env.local' \
-  --exclude='.env.deploy' \
-  --exclude='prisma/dev.db' \
-  --exclude='prisma/dev.db-*' \
-  --exclude='backups/*.sqlite' \
-  --exclude='scratch' \
-  -czf "$LOCAL_RELEASE" \
-  -C "$LOCAL_ROOT" .
+if ! git -C "$LOCAL_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "LOCAL_ROOT must be a git checkout so deployment can package a clean HEAD." >&2
+  exit 1
+fi
+
+echo "Creating upload package from git HEAD: $LOCAL_RELEASE"
+git -C "$LOCAL_ROOT" archive --format=tar HEAD | gzip > "$LOCAL_RELEASE"
 
 echo "Preparing remote directories and backing up app/database snapshots"
 ssh "${SSH_ARGS[@]}" "$remote" \
@@ -176,6 +167,7 @@ ensure_runtime_database_link() {
 
 mkdir -p "$REMOTE_APP_DIR"
 ensure_persistent_database
+find "$REMOTE_APP_DIR" -mindepth 1 -maxdepth 1 ! -name '.env' -exec rm -rf {} +
 tar -xzf "$REMOTE_RELEASE" -C "$REMOTE_APP_DIR"
 cd "$REMOTE_APP_DIR"
 
@@ -215,7 +207,7 @@ REMOTE_DEPLOY
 
 echo "Verifying endpoints and systemd services"
 ssh "${SSH_ARGS[@]}" "$remote" \
-  "REMOTE_APP_DIR='$REMOTE_APP_DIR' REMOTE_DB_PATH='$REMOTE_DB_PATH' BASE_URL='$BASE_URL' APP_SERVICE='$APP_SERVICE' WEB_SERVICE='$WEB_SERVICE' bash -s" <<'REMOTE_VERIFY'
+  "REMOTE_APP_DIR='$REMOTE_APP_DIR' REMOTE_DB_PATH='$REMOTE_DB_PATH' BASE_URL='$BASE_URL' APP_SERVICE='$APP_SERVICE' WEB_SERVICE='$WEB_SERVICE' LICENSE_SERVICE='$LICENSE_SERVICE' bash -s" <<'REMOTE_VERIFY'
 set -Eeuo pipefail
 
 expect_ok() {
@@ -260,16 +252,20 @@ done
 echo "OK runtime database links"
 
 static_asset="$(find "$REMOTE_APP_DIR/.next/static" -type f | head -n 1 || true)"
-if [[ -n "$static_asset" ]]; then
-  relative_asset="${static_asset#"$REMOTE_APP_DIR/.next/static/"}"
-  curl -fsS --max-time 15 "$BASE_URL/_next/static/$relative_asset" >/dev/null
-  echo "OK _next/static"
+if [[ -z "$static_asset" ]]; then
+  echo "No _next/static asset found for verification." >&2
+  exit 1
 fi
+relative_asset="${static_asset#"$REMOTE_APP_DIR/.next/static/"}"
+curl -fsS --max-time 15 "$BASE_URL/_next/static/$relative_asset" >/dev/null
+echo "OK _next/static"
 
 systemctl is-active --quiet "$APP_SERVICE"
 echo "OK $APP_SERVICE"
 systemctl is-active --quiet "$WEB_SERVICE"
 echo "OK $WEB_SERVICE"
+systemctl is-active --quiet "$LICENSE_SERVICE"
+echo "OK $LICENSE_SERVICE"
 REMOTE_VERIFY
 
 echo "Deployment complete."
