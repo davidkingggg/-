@@ -24,7 +24,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '请输入用户名和密码' }, { status: 400 })
     }
 
-    const user = await prisma.user.findUnique({ where: { username } })
+    const user = await prisma.user.findUnique({
+      where: { username },
+      include: {
+        person: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            department: true,
+            isActive: true,
+          },
+        },
+      },
+    })
     if (!user || !user.isActive) {
       recordFailedAttempt(rateKey)
       return NextResponse.json({ error: '用户名或密码错误' }, { status: 401 })
@@ -43,6 +56,8 @@ export async function POST(request: NextRequest) {
     session.username = user.username
     session.name = user.name
     session.isAdmin = user.isAdmin
+    session.personId = user.person?.isActive ? user.person.id : undefined
+    session.personName = user.person?.isActive ? user.person.name : undefined
     await session.save()
 
     return NextResponse.json({
@@ -50,6 +65,15 @@ export async function POST(request: NextRequest) {
       username: user.username,
       name: user.name,
       isAdmin: user.isAdmin,
+      personId: user.person?.isActive ? user.person.id : null,
+      person: user.person?.isActive
+        ? {
+            id: user.person.id,
+            name: user.person.name,
+            role: user.person.role,
+            department: user.person.department,
+          }
+        : null,
     })
   } catch {
     return NextResponse.json({ error: '登录失败' }, { status: 500 })

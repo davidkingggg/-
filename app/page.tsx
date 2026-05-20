@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import DashboardCard from '@/components/dashboard/DashboardCard'
 import { buildDashboardData } from '@/lib/dashboard-utils'
+import { getCurrentUser } from '@/lib/auth-utils'
 import { getSession } from '@/lib/session'
 import type { TaskItem } from '@/lib/task-aggregation'
 import { Sparkles, Clock, ChevronRight } from 'lucide-react'
@@ -117,7 +118,8 @@ function TodoSection({
 }
 
 export default async function Home() {
-  const data = await buildDashboardData()
+  const user = await getCurrentUser()
+  const data = await buildDashboardData(user?.personId)
   const session = await getSession()
   const userName = session.name || '用户'
   const greeting = getGreeting()
@@ -134,6 +136,12 @@ export default async function Home() {
 
   return (
     <div className="space-y-6">
+      {!user?.personId && (
+        <div className="rounded-[20px] border border-amber-200 bg-amber-50 px-5 py-4 text-[13px] text-amber-700">
+          当前账号未绑定人员，首页仍会显示公共采购盘面；绑定人员后会同步显示你的个人行政事项。
+        </div>
+      )}
+
       <div
         className="relative overflow-hidden rounded-[24px] text-white premium-transition shimmer-sweep"
         style={{
@@ -231,9 +239,9 @@ export default async function Home() {
               <span className="text-[10px] text-slate-400 font-bold bg-slate-100/80 px-2 py-0.5 rounded-md">日常非供应链管理</span>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <DashboardCard label="行政待办" value={data.admin.openCount} tone="slate" compact />
-              <DashboardCard label="本周行政事项" value={data.admin.weekCount} tone="blue" compact />
-              <DashboardCard label="超期行政事项" value={data.admin.overdueCount} tone="red" compact />
+              <DashboardCard label="我的行政待办" value={data.personal.adminCount} tone="slate" compact />
+              <DashboardCard label="本周我的行政" value={data.personal.weekCount} tone="blue" compact />
+              <DashboardCard label="超期我的行政" value={data.personal.overdueCount} tone="red" compact />
             </div>
           </section>
         </div>
@@ -263,7 +271,7 @@ export default async function Home() {
               <TodoSection title="本周待办" color="bg-amber-500" items={data.todos.weekItems} emptyText="暂无本周待办" />
               <TodoSection title="需老板决策" color="bg-blue-500" items={data.todos.bossDecisionItems} emptyText="暂无需老板决策事项" />
               <TodoSection title="采购异常/暂停" color="bg-orange-500" items={data.mainline.purchaseIssueItems} emptyText="暂无异常事项" />
-              <TodoSection title="行政事项" color="bg-slate-400" items={data.admin.items} emptyText="暂无行政事项" />
+              <TodoSection title="我的行政事项" color="bg-slate-400" items={data.admin.items} emptyText="暂无行政事项" />
             </div>
 
             <div className="px-5 py-4 border-t border-slate-100 bg-slate-50/50">

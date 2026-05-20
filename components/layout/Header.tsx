@@ -27,6 +27,7 @@ export default function Header() {
           <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/60 px-3.5 py-1.5 rounded-full text-xs font-semibold text-slate-700 shadow-sm shadow-slate-100">
             <User className="w-3.5 h-3.5 text-slate-500" />
             <span>{user.name}</span>
+            {user.person?.name && <span className="text-slate-400">· {user.person.name}</span>}
           </div>
         )}
         <button

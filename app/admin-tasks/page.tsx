@@ -87,6 +87,7 @@ function priorityClass(priority: string | null) {
 export default function AdminTasksPage() {
   const [tasks, setTasks] = useState<AdminTask[]>([])
   const [loading, setLoading] = useState(true)
+  const [bindingError, setBindingError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<TaskForm>(EMPTY_FORM)
@@ -120,9 +121,16 @@ export default function AdminTasksPage() {
           throw new Error(error.error || '获取行政事项列表失败')
         }
 
+        setBindingError('')
         setTasks(await response.json())
       } catch (error) {
-        showToast(error instanceof Error ? error.message : '获取行政事项列表失败', 'error')
+        const message = error instanceof Error ? error.message : '获取行政事项列表失败'
+        if (message.includes('未绑定人员')) {
+          setBindingError(message)
+          setTasks([])
+        } else {
+          showToast(message, 'error')
+        }
       } finally {
         setLoading(false)
       }
@@ -229,8 +237,8 @@ export default function AdminTasksPage() {
     <div className="p-6">
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-[22px] font-bold text-[#0f172a]">行政事项</h1>
-          <p className="text-[13px] text-slate-400 mt-0.5">独立管理会议、周报、接待和办公采购等行政事项。</p>
+          <h1 className="text-[22px] font-bold text-[#0f172a]">我的行政事项</h1>
+          <p className="text-[13px] text-slate-400 mt-0.5">仅展示当前登录账号绑定人员名下的个人行政事项。</p>
         </div>
         <button
           type="button"
@@ -289,6 +297,12 @@ export default function AdminTasksPage() {
           清空筛选
         </button>
       </div>
+
+      {bindingError && (
+        <div className="mb-4 rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-700">
+          {bindingError}
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-[20px] border border-[#e5eaf3] bg-white" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
         {loading ? (

@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { buildCSVContent as buildUnifiedCSVContent } from '@/lib/csv-utils'
+import { isOpenAdminStatus, isOverdue, isThisWeekDue } from '@/lib/task-status-utils'
 
 type ReportSource = 'development' | 'purchase'
 type RiskLevel = 'high' | 'watch'
@@ -8,6 +9,7 @@ type RiskLevel = 'high' | 'watch'
 export interface BossReportFilter {
   startDate?: string | null
   endDate?: string | null
+  currentPersonId?: string | null
 }
 
 export interface BossReportItem {
@@ -64,6 +66,21 @@ export interface BossReportData {
   purchaseProgress: BossReportItem[]
   bossDecisions: BossReportItem[]
   currentRisks: BossReportRiskItem[]
+  personal: {
+    personBound: boolean
+    adminOpenCount: number
+    adminWeekCount: number
+    adminOverdueCount: number
+    adminItems: Array<{
+      id: string
+      title: string
+      type: string
+      status: string
+      priority?: string | null
+      dueDate?: string | null
+      notes?: string | null
+    }>
+  }
   markdown: string
 }
 
@@ -300,6 +317,23 @@ function formatMarkdownList(items: BossReportItem[], emptyText: string, withRisk
     .join('\n')
 }
 
+function formatPersonalAdminMarkdown(data: Omit<BossReportData, 'markdown'>) {
+  if (!data.personal.personBound) {
+    return '- 当前账号未绑定人员，个人行政事项暂不可用'
+  }
+  if (data.personal.adminItems.length === 0) {
+    return '- 当前暂无个人行政事项'
+  }
+
+  return data.personal.adminItems
+    .map((item) => {
+      const due = item.dueDate ? `，截止：${formatDisplayDate(item.dueDate)}` : ''
+      const notes = item.notes ? `，备注：${item.notes}` : ''
+      return `- [行政] ${item.title}，类型：${item.type}，状态：${item.status}${due}${notes}`
+    })
+    .join('\n')
+}
+
 export function buildBossReportMarkdown(data: Omit<BossReportData, 'markdown'>) {
   const highRisks = data.currentRisks.filter((item) => item.riskLevel === 'high')
   const watchRisks = data.currentRisks.filter((item) => item.riskLevel === 'watch')
@@ -312,6 +346,7 @@ export function buildBossReportMarkdown(data: Omit<BossReportData, 'markdown'>) 
     `- 采购进展：${data.summary.purchaseProgressCount} 项`,
     `- 待老板决策：${data.summary.bossDecisionCount} 项`,
     `- 当前未解决风险：${data.summary.currentRiskCount} 项（高风险 ${data.summary.highRiskCount} 项，关注项 ${data.summary.watchRiskCount} 项）`,
+    `- 我的行政待办：${data.personal.adminOpenCount} 项（本周 ${data.personal.adminWeekCount} 项，超期 ${data.personal.adminOverdueCount} 项）`,
     '',
     '## 二、重点品类（前 5）',
     data.focusCategories.length === 0
@@ -335,6 +370,9 @@ export function buildBossReportMarkdown(data: Omit<BossReportData, 'markdown'>) 
     '',
     '### 关注项',
     formatMarkdownList(watchRisks, '当前暂无关注项', true),
+    '',
+    '## 六、我的行政事项',
+    formatPersonalAdminMarkdown(data),
   ].join('\n')
 }
 
@@ -388,6 +426,25 @@ export function buildBossReportCsvRows(data: BossReportData) {
   data.currentRisks.forEach((item) =>
     pushRow('当前未解决风险/异常/暂停', item, item.riskLabel, item.riskReasons.join('、')),
   )
+  data.personal.adminItems.forEach((item) => {
+    rows.push([
+      '我的行政事项',
+      '',
+      '行政',
+      item.title,
+      '',
+      '',
+      '',
+      item.status,
+      item.type,
+      item.priority || '',
+      item.dueDate ? formatDisplayDate(item.dueDate) : '',
+      '否',
+      '',
+      '',
+      item.notes || '',
+    ])
+  })
 
   return rows
 }
@@ -397,9 +454,10 @@ export function buildCsvContent(rows: string[][]) {
 }
 
 export async function buildBossReportData(filter: BossReportFilter = {}): Promise<BossReportData> {
+  const currentPersonId = filter.currentPersonId ?? null
   const { start, end } = getReportRange(filter)
 
-  const [developmentProcesses, purchaseProcesses] = await Promise.all([
+  const [developmentProcesses, purchaseProcesses, personalAdminTasks] = await Promise.all([
     prisma.supplierDevelopmentProcess.findMany({
       where: {
         isArchived: false,
@@ -424,6 +482,15 @@ export async function buildBossReportData(filter: BossReportFilter = {}): Promis
         owner: { select: { name: true } },
       },
     }),
+    currentPersonId
+      ? prisma.adminTask.findMany({
+          where: {
+            isArchived: false,
+            ownerPersonId: currentPersonId,
+          },
+          orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
+        })
+      : Promise.resolve([]),
   ])
 
   const developmentProgress = sortReportItems(developmentProcesses.filter((item) => isProgressInRange(item, start, end)).map(mapDevelopmentItem))
@@ -486,6 +553,21 @@ export async function buildBossReportData(filter: BossReportFilter = {}): Promis
     purchaseProgress,
     bossDecisions,
     currentRisks,
+    personal: {
+      personBound: Boolean(currentPersonId),
+      adminOpenCount: personalAdminTasks.filter((item) => isOpenAdminStatus(item.status)).length,
+      adminWeekCount: personalAdminTasks.filter((item) => isOpenAdminStatus(item.status) && isThisWeekDue(item.dueDate)).length,
+      adminOverdueCount: personalAdminTasks.filter((item) => isOpenAdminStatus(item.status) && isOverdue(item.dueDate)).length,
+      adminItems: personalAdminTasks.slice(0, 6).map((item) => ({
+        id: item.id,
+        title: item.title,
+        type: item.type,
+        status: item.status,
+        priority: item.priority,
+        dueDate: item.dueDate?.toISOString() ?? null,
+        notes: item.notes,
+      })),
+    },
   }
 
   return {

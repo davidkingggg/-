@@ -49,6 +49,12 @@ export interface DashboardData {
     overdueCount: number
     items: TaskItem[]
   }
+  personal: {
+    adminCount: number
+    weekCount: number
+    overdueCount: number
+    items: TaskItem[]
+  }
 }
 
 function mapPurchaseIssueItem(item: {
@@ -91,9 +97,10 @@ function takeTop(items: TaskItem[], count: number) {
   return items.slice(0, count)
 }
 
-export async function buildDashboardData(): Promise<DashboardData> {
-  const [tasks, supplierCount, recommendedSupplierCount, categoryCount, quoteSheetCount, salesMaterialCount, developmentProcesses, purchaseProcesses] = await Promise.all([
-    buildTaskAggregation(),
+export async function buildDashboardData(currentPersonId?: string | null): Promise<DashboardData> {
+  const tasks = await buildTaskAggregation({}, currentPersonId)
+
+  const [supplierCount, recommendedSupplierCount, categoryCount, quoteSheetCount, salesMaterialCount, developmentProcesses, purchaseProcesses] = await Promise.all([
     prisma.supplier.count({ where: { isArchived: false } }),
     prisma.supplier.count({
       where: {
@@ -120,7 +127,9 @@ export async function buildDashboardData(): Promise<DashboardData> {
 
   const developmentInProgressCount = developmentProcesses.filter((item) => item.status === '进行中').length
   const purchaseInProgressCount = purchaseProcesses.filter((item) => item.status === '进行中').length
-  const purchaseIssueItems = purchaseProcesses.filter((item) => PURCHASE_ISSUE_STATUSES.includes(item.status)).map(mapPurchaseIssueItem)
+  const purchaseIssueItems = purchaseProcesses
+    .filter((item) => PURCHASE_ISSUE_STATUSES.includes(item.status))
+    .map(mapPurchaseIssueItem)
 
   const mainlineWeekItems = tasks.sections.week.filter((item) => item.source !== 'admin')
   const mainlineOverdueItems = tasks.sections.overdue.filter((item) => item.source !== 'admin')
@@ -168,6 +177,12 @@ export async function buildDashboardData(): Promise<DashboardData> {
     admin: {
       openCount: adminItems.length,
       weekCount: adminItems.filter((item) => item.isThisWeek).length,
+      overdueCount: adminOverdueItems.length,
+      items: takeTop(adminItems, 6),
+    },
+    personal: {
+      adminCount: adminItems.length,
+      weekCount: tasks.sections.week.filter((item) => item.source === 'admin').length,
       overdueCount: adminOverdueItems.length,
       items: takeTop(adminItems, 6),
     },

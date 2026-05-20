@@ -245,6 +245,12 @@ export default function BossReportPage() {
 
       {data && (
         <>
+          {!data.personal.personBound && (
+            <div className="mt-6 rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-700">
+              当前账号未绑定人员，驾驶舱只展示公共采购经营数据；绑定人员后会同步显示“我的行政事项”。
+            </div>
+          )}
+
           {/* KPI Cards */}
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-4">
             <KpiCard label="开发进展" value={data.summary.developmentProgressCount} description="本期开发跟进事项" tone="text-blue-600" icon="🚀" />
@@ -252,6 +258,12 @@ export default function BossReportPage() {
             <KpiCard label="待决策" value={data.summary.bossDecisionCount} description="需要管理层决策" tone="text-red-600" icon="⚡" />
             <KpiCard label="高风险" value={data.summary.highRiskCount} description="异常/淘汰/超期" tone="text-orange-600" icon="🔴" />
             <KpiCard label="关注项" value={data.summary.watchRiskCount} description="暂停/有问题待解" tone="text-slate-600" icon="🟡" />
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <KpiCard label="我的行政待办" value={data.personal.adminOpenCount} description="当前账号名下未完成行政事项" tone="text-slate-700" icon="🗂️" />
+            <KpiCard label="本周我的行政" value={data.personal.adminWeekCount} description="本周内到期的个人行政事项" tone="text-blue-600" icon="📆" />
+            <KpiCard label="超期我的行政" value={data.personal.adminOverdueCount} description="当前已超期的个人行政事项" tone="text-red-600" icon="⏰" />
           </div>
 
           {/* 3-column overview */}
@@ -382,6 +394,34 @@ export default function BossReportPage() {
                   )}
                 </div>
               </div>
+            </div>
+          </Section>
+
+          <Section title="我的行政事项" subtitle="仅展示当前登录账号绑定人员名下的个人行政事项。">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {data.personal.adminItems.length === 0 ? (
+                <EmptyLine text={data.personal.personBound ? '当前暂无个人行政事项' : '绑定人员后，这里会显示你的个人行政事项'} />
+              ) : (
+                data.personal.adminItems.map((item) => (
+                  <div key={item.id} className="rounded-[20px] border border-[#e5eaf3] bg-white p-4" style={CARD_SHADOW}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600">我的行政</span>
+                          {item.priority && <span className="text-xs px-2 py-0.5 rounded bg-amber-50 text-amber-700">{item.priority}</span>}
+                        </div>
+                        <h3 className="font-semibold text-gray-900 mt-2 break-words">{item.title}</h3>
+                        <div className="text-sm text-gray-500 mt-1 break-words">{item.type}</div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <StatusBadge status={item.status} />
+                        <div className="text-xs text-gray-400 mt-1">{formatDate(item.dueDate)}</div>
+                      </div>
+                    </div>
+                    <div className="mt-3 text-sm text-gray-600">{item.notes || '暂无备注'}</div>
+                  </div>
+                ))
+              )}
             </div>
           </Section>
 

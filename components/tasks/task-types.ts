@@ -23,6 +23,9 @@ export interface TaskItem {
 }
 
 export interface TaskResponse {
+  meta: {
+    personBound: boolean
+  }
   summary: {
     weekCount: number
     overdueCount: number

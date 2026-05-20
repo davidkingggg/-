@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { ADMIN_ERROR, hashPassword, isAdminError, requireAdmin, validatePasswordPolicy } from '@/lib/auth-utils'
+import { ensureLegacyAdminTasksAssigned } from '@/lib/admin-task-auth'
+import { normalizePersonIdInput, validatePersonBinding } from '@/lib/user-person-binding'
 
 function normalizeOptionalText(value: unknown): string | undefined {
   return value === undefined ? undefined : typeof value === 'string' ? value.trim() : ''
@@ -31,15 +33,19 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: '用户不存在' }, { status: 404 })
     }
 
-    const data: { name?: string; isAdmin?: boolean; passwordHash?: string } = {}
+    const data: { name?: string; isAdmin?: boolean; passwordHash?: string; personId?: string | null } = {}
     const name = normalizeOptionalText(body.name)
     const password = normalizeOptionalText(body.password)
+    const personIdInput = normalizePersonIdInput(body.personId)
 
     if (name !== undefined) {
       if (!name) {
         return NextResponse.json({ error: '姓名不能为空' }, { status: 400 })
       }
       data.name = name
+    }
+    if (personIdInput === '') {
+      return NextResponse.json({ error: '绑定人员格式不正确' }, { status: 400 })
     }
 
     if (body.isAdmin !== undefined) {
@@ -60,16 +66,34 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       data.passwordHash = await hashPassword(password)
     }
 
+    if (personIdInput !== undefined) {
+      const binding = await validatePersonBinding(personIdInput, id)
+      data.personId = binding.personId
+    }
+
     const updated = await prisma.user.update({
       where: { id },
       data,
-      select: { id: true, username: true, name: true, isAdmin: true, isActive: true },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        isAdmin: true,
+        isActive: true,
+        personId: true,
+        person: { select: { id: true, name: true } },
+      },
     })
+
+    await ensureLegacyAdminTasksAssigned()
 
     return NextResponse.json(updated)
   } catch (error) {
     if (isAdminError(error)) {
       return NextResponse.json({ error: ADMIN_ERROR }, { status: 403 })
+    }
+    if (error instanceof Error && (error.message.includes('绑定人员') || error.message.includes('已绑定到用户'))) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
     }
     return NextResponse.json({ error: '更新用户失败' }, { status: 500 })
   }
@@ -101,7 +125,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const updated = await prisma.user.update({
       where: { id },
       data: { isActive },
-      select: { id: true, username: true, name: true, isAdmin: true, isActive: true },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        isAdmin: true,
+        isActive: true,
+        personId: true,
+        person: { select: { id: true, name: true } },
+      },
     })
 
     return NextResponse.json(updated)

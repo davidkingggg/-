@@ -2,7 +2,9 @@ import bcrypt from 'bcryptjs'
 import { prisma } from './db'
 import { getSession } from './session'
 
+export const AUTH_ERROR = '未登录'
 export const ADMIN_ERROR = '需要管理员权限'
+export const PERSON_BINDING_ERROR = '当前账号未绑定人员，请联系管理员在用户管理中绑定后再使用个人数据'
 export const PASSWORD_MIN_LENGTH = 10
 export const PASSWORD_POLICY_ERROR = `密码至少 ${PASSWORD_MIN_LENGTH} 位`
 
@@ -22,22 +24,69 @@ export function isAdminError(error: unknown): boolean {
   return error instanceof Error && error.message === ADMIN_ERROR
 }
 
+export function isAuthError(error: unknown): boolean {
+  return error instanceof Error && error.message === AUTH_ERROR
+}
+
+export function isPersonBindingError(error: unknown): boolean {
+  return error instanceof Error && error.message === PERSON_BINDING_ERROR
+}
+
 export async function getCurrentUser() {
   const session = await getSession()
   if (!session.userId) return null
 
   const user = await prisma.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, username: true, name: true, isAdmin: true, isActive: true },
+    select: {
+      id: true,
+      username: true,
+      name: true,
+      isAdmin: true,
+      isActive: true,
+      personId: true,
+      person: {
+        select: {
+          id: true,
+          name: true,
+          role: true,
+          department: true,
+          isActive: true,
+        },
+      },
+    },
   })
 
   if (!user || !user.isActive) return null
+  if (user.person && !user.person.isActive) {
+    return {
+      ...user,
+      personId: null,
+      person: null,
+    }
+  }
   return user
 }
 
-export async function requireAdmin() {
+export async function requireUser() {
   const user = await getCurrentUser()
-  if (!user || !user.isAdmin) {
+  if (!user) {
+    throw new Error(AUTH_ERROR)
+  }
+  return user
+}
+
+export async function requireBoundPerson() {
+  const user = await requireUser()
+  if (!user.personId || !user.person) {
+    throw new Error(PERSON_BINDING_ERROR)
+  }
+  return user as typeof user & { personId: string; person: NonNullable<typeof user.person> }
+}
+
+export async function requireAdmin() {
+  const user = await requireUser()
+  if (!user.isAdmin) {
     throw new Error(ADMIN_ERROR)
   }
   return user

@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
+import {
+  AUTH_ERROR,
+  PERSON_BINDING_ERROR,
+  isAuthError,
+  isPersonBindingError,
+} from '@/lib/auth-utils'
+import { ensureAdminTaskOwnerPersonId } from '@/lib/admin-task-auth'
 
 const VALID_PRIORITIES = ['高', '中', '低']
 const VALID_STATUSES = ['未开始', '进行中', '已完成', '暂停']
@@ -52,15 +59,30 @@ function validateTaskBody(body: Record<string, unknown>) {
   }
 }
 
+function authErrorResponse(error: unknown) {
+  if (isAuthError(error)) {
+    return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+  }
+  if (isPersonBindingError(error)) {
+    return NextResponse.json({ error: PERSON_BINDING_ERROR }, { status: 400 })
+  }
+  return null
+}
+
 export async function GET(request: NextRequest) {
   try {
+    const ownerPersonId = await ensureAdminTaskOwnerPersonId()
+
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type')
     const status = searchParams.get('status')
     const priority = searchParams.get('priority')
     const overdue = searchParams.get('overdue')
 
-    const where: Prisma.AdminTaskWhereInput = { isArchived: false }
+    const where: Prisma.AdminTaskWhereInput = {
+      isArchived: false,
+      ownerPersonId,
+    }
     if (type) where.type = type
     if (status) where.status = status
     if (priority) where.priority = priority
@@ -77,20 +99,20 @@ export async function GET(request: NextRequest) {
 
     const tasks = await prisma.adminTask.findMany({
       where,
-      orderBy: [
-        { dueDate: 'asc' },
-        { createdAt: 'desc' },
-      ],
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
     })
 
     return NextResponse.json(tasks)
-  } catch {
+  } catch (error) {
+    const authResponse = authErrorResponse(error)
+    if (authResponse) return authResponse
     return NextResponse.json({ error: '获取行政事项列表失败' }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
+    const ownerPersonId = await ensureAdminTaskOwnerPersonId()
     const body = await request.json()
     const result = validateTaskBody(body)
 
@@ -101,6 +123,7 @@ export async function POST(request: Request) {
     const task = await prisma.adminTask.create({
       data: {
         ...result.data,
+        ownerPersonId,
         completedAt: result.data.status === '已完成' ? new Date() : null,
         isArchived: false,
         archivedAt: null,
@@ -108,7 +131,9 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(task, { status: 201 })
-  } catch {
+  } catch (error) {
+    const authResponse = authErrorResponse(error)
+    if (authResponse) return authResponse
     return NextResponse.json({ error: '新增行政事项失败' }, { status: 500 })
   }
 }

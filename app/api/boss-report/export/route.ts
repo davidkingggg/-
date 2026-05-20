@@ -1,15 +1,21 @@
 import { NextResponse } from 'next/server'
 import { buildBossReportData, buildBossReportCsvRows, buildCsvContent } from '@/lib/boss-report-utils'
 import { createCSVHeaders } from '@/lib/csv-utils'
+import { getCurrentUser } from '@/lib/auth-utils'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json({ error: '未登录' }, { status: 401 })
+    }
     const { searchParams } = new URL(request.url)
     const data = await buildBossReportData({
       startDate: searchParams.get('startDate') || searchParams.get('from'),
       endDate: searchParams.get('endDate') || searchParams.get('to'),
+      currentPersonId: user.personId,
     })
     const csvContent = buildCsvContent(buildBossReportCsvRows(data))
 

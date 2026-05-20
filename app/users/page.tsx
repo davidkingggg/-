@@ -10,6 +10,13 @@ interface UserRecord {
   isAdmin: boolean
   isActive: boolean
   createdAt: string
+  personId: string | null
+  person: { id: string; name: string } | null
+}
+
+interface PersonOption {
+  id: string
+  name: string
 }
 
 export default function UsersPage() {
@@ -18,18 +25,21 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [editTarget, setEditTarget] = useState<UserRecord | null>(null)
+  const [people, setPeople] = useState<PersonOption[]>([])
 
   // Create form
   const [newUsername, setNewUsername] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [newName, setNewName] = useState('')
   const [newIsAdmin, setNewIsAdmin] = useState(false)
+  const [newPersonId, setNewPersonId] = useState('')
   const [createLoading, setCreateLoading] = useState(false)
 
   // Edit form
   const [editName, setEditName] = useState('')
   const [editIsAdmin, setEditIsAdmin] = useState(false)
   const [editPassword, setEditPassword] = useState('')
+  const [editPersonId, setEditPersonId] = useState('')
   const [editLoading, setEditLoading] = useState(false)
 
   const loadUsers = useCallback(async () => {
@@ -56,6 +66,22 @@ export default function UsersPage() {
     })
   }, [loadUsers])
 
+  useEffect(() => {
+    async function loadPeople() {
+      try {
+        const res = await fetch('/api/people')
+        if (!res.ok) return
+        setPeople(await res.json())
+      } catch {
+        setPeople([])
+      }
+    }
+
+    startTransition(() => {
+      void loadPeople()
+    })
+  }, [])
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     setCreateLoading(true)
@@ -63,7 +89,13 @@ export default function UsersPage() {
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: newUsername, password: newPassword, name: newName, isAdmin: newIsAdmin }),
+        body: JSON.stringify({
+          username: newUsername,
+          password: newPassword,
+          name: newName,
+          isAdmin: newIsAdmin,
+          personId: newPersonId || null,
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -76,6 +108,7 @@ export default function UsersPage() {
       setNewPassword('')
       setNewName('')
       setNewIsAdmin(false)
+      setNewPersonId('')
       loadUsers()
     } catch {
       showToast('创建失败', 'error')
@@ -89,7 +122,7 @@ export default function UsersPage() {
     if (!editTarget) return
     setEditLoading(true)
     try {
-      const body: Record<string, unknown> = { name: editName, isAdmin: editIsAdmin }
+      const body: Record<string, unknown> = { name: editName, isAdmin: editIsAdmin, personId: editPersonId || null }
       if (editPassword) body.password = editPassword
 
       const res = await fetch(`/api/users/${editTarget.id}`, {
@@ -137,6 +170,7 @@ export default function UsersPage() {
     setEditName(user.name)
     setEditIsAdmin(user.isAdmin)
     setEditPassword('')
+    setEditPersonId(user.personId || '')
   }
 
   return (
@@ -166,6 +200,7 @@ export default function UsersPage() {
                 <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">姓名</th>
                 <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">用户名</th>
                 <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">角色</th>
+                <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">绑定人员</th>
                 <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">状态</th>
                 <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">创建时间</th>
                 <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">操作</th>
@@ -185,6 +220,7 @@ export default function UsersPage() {
                       {u.isAdmin ? '管理员' : '普通用户'}
                     </span>
                   </td>
+                  <td className="px-4 h-[58px] text-[14px] text-gray-500">{u.person?.name || '未绑定'}</td>
                   <td className="px-4 h-[58px] text-[14px]">
                     <span
                       className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
@@ -259,6 +295,21 @@ export default function UsersPage() {
                 />
                 管理员权限
               </label>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">绑定人员</label>
+                <select
+                  value={newPersonId}
+                  onChange={(e) => setNewPersonId(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  <option value="">暂不绑定</option>
+                  {people.map((person) => (
+                    <option key={person.id} value={person.id}>
+                      {person.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
@@ -317,6 +368,21 @@ export default function UsersPage() {
                 />
                 管理员权限
               </label>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">绑定人员</label>
+                <select
+                  value={editPersonId}
+                  onChange={(e) => setEditPersonId(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  <option value="">暂不绑定</option>
+                  {people.map((person) => (
+                    <option key={person.id} value={person.id}>
+                      {person.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"

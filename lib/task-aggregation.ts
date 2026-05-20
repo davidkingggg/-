@@ -33,6 +33,9 @@ export interface TaskItem {
 }
 
 export interface TaskResponse {
+  meta: {
+    personBound: boolean
+  }
   summary: {
     weekCount: number
     overdueCount: number
@@ -80,7 +83,11 @@ type PurchaseProcess = Prisma.PurchaseExecutionProcessGetPayload<{
   }
 }>
 
-type AdminTask = Prisma.AdminTaskGetPayload<Record<string, never>>
+type AdminTask = Prisma.AdminTaskGetPayload<{
+  include: {
+    ownerPerson: { select: { name: true } }
+  }
+}>
 
 export function parseTaskDateParam(value: string | null, label: string) {
   if (!value) return undefined
@@ -204,8 +211,9 @@ function mapAdminTask(item: AdminTask): TaskItem {
   return {
     id: item.id,
     source: 'admin',
-    sourceLabel: '行政事项',
+    sourceLabel: '我的行政',
     title: item.title,
+    ownerName: item.ownerPerson?.name || undefined,
     priority: item.priority || undefined,
     dueDate: item.dueDate?.toISOString(),
     status: item.status,
@@ -219,7 +227,10 @@ function mapAdminTask(item: AdminTask): TaskItem {
   }
 }
 
-export async function buildTaskAggregation(filters: TaskQueryFilters = {}): Promise<TaskResponse> {
+export async function buildTaskAggregation(
+  filters: TaskQueryFilters = {},
+  currentPersonId?: string | null,
+): Promise<TaskResponse> {
   const baseWhere = {
     isArchived: false,
     ...(filters.priority ? { priority: filters.priority } : {}),
@@ -256,13 +267,19 @@ export async function buildTaskAggregation(filters: TaskQueryFilters = {}): Prom
         }),
     filters.source && filters.source !== 'admin'
       ? Promise.resolve([])
-      : prisma.adminTask.findMany({
-          where: {
-            isArchived: false,
-            ...(filters.priority ? { priority: filters.priority } : {}),
-            ...(filters.status ? { status: filters.status } : {}),
-          },
-        }),
+      : currentPersonId
+        ? prisma.adminTask.findMany({
+            where: {
+              isArchived: false,
+              ownerPersonId: currentPersonId,
+              ...(filters.priority ? { priority: filters.priority } : {}),
+              ...(filters.status ? { status: filters.status } : {}),
+            },
+            include: {
+              ownerPerson: { select: { name: true } },
+            },
+          })
+        : Promise.resolve([]),
   ])
 
   const developmentItems = developmentProcesses
@@ -280,7 +297,9 @@ export async function buildTaskAggregation(filters: TaskQueryFilters = {}): Prom
     .filter((item) => inDateRange(item.dueDate, filters))
     .map(mapAdminTask)
 
-  const allItems = [...developmentItems, ...purchaseItems, ...adminItems].filter((item) => shouldIncludeItem(item, filters))
+  const allItems = [...developmentItems, ...purchaseItems, ...adminItems].filter((item) =>
+    shouldIncludeItem(item, filters),
+  )
 
   const sections = {
     week: sortTasks(allItems.filter((item) => item.isThisWeek)),
@@ -291,6 +310,9 @@ export async function buildTaskAggregation(filters: TaskQueryFilters = {}): Prom
   }
 
   return {
+    meta: {
+      personBound: Boolean(currentPersonId),
+    },
     summary: {
       weekCount: sections.week.length,
       overdueCount: sections.overdue.length,

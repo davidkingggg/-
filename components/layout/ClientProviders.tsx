@@ -8,6 +8,21 @@ interface AuthUser {
   username: string
   name: string
   isAdmin: boolean
+  personId: string | null
+  person: {
+    id: string
+    name: string
+    role: string | null
+    department: string | null
+  } | null
+  session: {
+    userId: string | null
+    username: string | null
+    name: string | null
+    isAdmin: boolean
+    personId: string | null
+    personName: string | null
+  }
 }
 
 interface AuthContextValue {

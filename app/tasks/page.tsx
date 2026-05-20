@@ -18,6 +18,9 @@ const emptyFilters: TaskFiltersValue = {
 }
 
 const emptyResponse: TaskResponse = {
+  meta: {
+    personBound: false,
+  },
   summary: {
     weekCount: 0,
     overdueCount: 0,
@@ -40,7 +43,7 @@ const quickTabs = [
   { key: 'week', label: '本周' },
   { key: 'highPriority', label: '高优先级' },
   { key: 'bossDecision', label: '老板决策' },
-  { key: 'admin', label: '行政事项' },
+  { key: 'admin', label: '我的行政' },
 ]
 
 export default function TasksPage() {
@@ -163,6 +166,15 @@ export default function TasksPage() {
     }
   }, [allTasks, activeTab])
 
+  const publicTasks = useMemo(
+    () => filteredTasks.filter((task) => task.source !== 'admin'),
+    [filteredTasks],
+  )
+  const personalAdminTasks = useMemo(
+    () => filteredTasks.filter((task) => task.source === 'admin'),
+    [filteredTasks],
+  )
+
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)
     // Clear scope filter since we do client-side tab filtering
@@ -180,7 +192,7 @@ export default function TasksPage() {
             待办中心
           </h1>
           <p style={{ marginTop: 6, fontSize: 14, color: '#64748b' }}>
-            采购执行、供应商开发、行政事项等综合待办处理中心
+            公共采购待办与我的行政事项分开展示，既保留公共盘面，也保留个人视角。
           </p>
         </div>
 
@@ -236,6 +248,12 @@ export default function TasksPage() {
           </div>
         )}
 
+        {!error && !data.meta.personBound && (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+            当前账号未绑定人员，待办中心仅显示公共采购待办；绑定人员后会自动显示“我的行政事项”。
+          </div>
+        )}
+
         {/* 任务列表 */}
         <div className="mt-5">
           {loading ? (
@@ -246,10 +264,58 @@ export default function TasksPage() {
               待办数据加载中...
             </div>
           ) : filteredTasks.length > 0 ? (
-            <div className="space-y-3">
-              {filteredTasks.map((item) => (
-                <TaskItemCard key={`${item.source}-${item.id}`} item={item} />
-              ))}
+            <div className="space-y-6">
+              <section>
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-800">公共采购待办</h2>
+                    <p className="text-xs text-slate-400 mt-1">供应商开发、采购执行和老板决策等公共协同事项。</p>
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+                    {publicTasks.length} 项
+                  </span>
+                </div>
+                {publicTasks.length > 0 ? (
+                  <div className="space-y-3">
+                    {publicTasks.map((item) => (
+                      <TaskItemCard key={`${item.source}-${item.id}`} item={item} />
+                    ))}
+                  </div>
+                ) : (
+                  <div
+                    className="rounded-2xl border bg-white p-6 text-center text-sm text-gray-400"
+                    style={{ borderColor: '#e5eaf3', boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)' }}
+                  >
+                    当前筛选条件下暂无公共采购待办
+                  </div>
+                )}
+              </section>
+
+              <section>
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-800">我的行政事项</h2>
+                    <p className="text-xs text-slate-400 mt-1">仅展示当前登录账号绑定人员名下的个人行政事项。</p>
+                  </div>
+                  <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+                    {personalAdminTasks.length} 项
+                  </span>
+                </div>
+                {personalAdminTasks.length > 0 ? (
+                  <div className="space-y-3">
+                    {personalAdminTasks.map((item) => (
+                      <TaskItemCard key={`${item.source}-${item.id}`} item={item} />
+                    ))}
+                  </div>
+                ) : (
+                  <div
+                    className="rounded-2xl border bg-white p-6 text-center text-sm text-gray-400"
+                    style={{ borderColor: '#e5eaf3', boxShadow: '0 8px 24px rgba(15, 23, 42, 0.05)' }}
+                  >
+                    {data.meta.personBound ? '当前筛选条件下暂无我的行政事项' : '绑定人员后，这里会显示你的个人行政事项'}
+                  </div>
+                )}
+              </section>
             </div>
           ) : (
             <div

@@ -70,6 +70,7 @@
 - `email`: 邮箱
 - `notes`: 备注
 - `isActive`: 是否在用
+- `user`: 可选绑定的登录账号（1 对 1）
 - `createdAt`: 创建时间
 - `updatedAt`: 更新时间
 
@@ -220,10 +221,11 @@
 - `updatedAt`: 更新时间
 
 ## 11. 行政事项：AdminTask
-行政事项独立管理。
+行政事项独立管理，现已改为个人归属数据。
 - `id`: 主键
 - `title`: 事项名称
 - `type`: 类型（会议/周报/办公采购/接待等）
+- `ownerPersonId`: 归属人员（只展示给当前登录账号绑定的对应人员）
 - `priority`: 高 / 中 / 低
 - `dueDate`: 截止时间
 - `isRecurring`: 是否重复事项
@@ -262,6 +264,18 @@
 - `notes`: 备注说明
 - `updatedAt`: 更新时间
 
+## 13.1 登录账号表：User
+用于系统登录认证，并可选绑定到一条 Person 记录。
+- `id`: 主键
+- `username`: 用户名（唯一）
+- `passwordHash`: 密码哈希
+- `name`: 登录显示姓名
+- `personId`: 绑定的内部人员 ID（可空、唯一）
+- `isAdmin`: 是否管理员
+- `isActive`: 是否启用
+- `createdAt`: 创建时间
+- `updatedAt`: 更新时间
+
 ## 14. 附件表：Attachment
 统一管理各类文件的本地路径关联，避免各表单独设置 filePath 导致混乱。
 - `id`: 主键
@@ -296,7 +310,7 @@
 2. `PurchaseExecutionProcess.dueDate` 未完成事项
 3. `needBossDecision = true` 的流程事项
 4. `needSalesSupport = true` 的供应商开发事项
-5. `AdminTask.dueDate` 未完成事项
+5. 当前登录账号绑定人员名下的 `AdminTask.dueDate` 未完成事项
 
 > **统计口径说明：**
 > - **本周待办**：`dueDate` 在本周一到本周日之间，且状态不是已完成/归档/淘汰/异常。

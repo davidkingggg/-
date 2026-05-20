@@ -99,6 +99,8 @@ model Person {
   purchaseRequesterProcess   PurchaseExecutionProcess[]   @relation("PurchaseRequester")
   devOwnerProcess            SupplierDevelopmentProcess[] @relation("DevOwner")
   supplierScores             SupplierScore[]
+  adminTasks                 AdminTask[]                  @relation("AdminTaskOwner")
+  user                       User?
 }
 
 model QuoteSheet {
@@ -269,19 +271,21 @@ model PurchaseExecutionProcess {
 }
 
 model AdminTask {
-  id          String    @id @default(uuid())
-  title       String
-  type        String
-  priority    String?
-  dueDate     DateTime?
-  isRecurring Boolean   @default(false)
-  status      String
-  completedAt DateTime?
-  notes       String?
-  isArchived  Boolean   @default(false)
-  archivedAt  DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           String    @id @default(uuid())
+  title        String
+  type         String
+  ownerPersonId String?
+  priority     String?
+  dueDate      DateTime?
+  isRecurring  Boolean   @default(false)
+  status       String
+  completedAt  DateTime?
+  notes        String?
+  isArchived   Boolean   @default(false)
+  archivedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  ownerPerson  Person?   @relation("AdminTaskOwner", fields: [ownerPersonId], references: [id])
 }
 
 model SalesMaterial {
@@ -317,10 +321,12 @@ model User {
   username     String   @unique
   passwordHash String
   name         String
+  personId     String?  @unique
   isAdmin      Boolean  @default(false)
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  person       Person?  @relation(fields: [personId], references: [id])
 }
 
 model Attachment {

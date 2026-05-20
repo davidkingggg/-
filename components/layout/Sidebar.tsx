@@ -29,14 +29,14 @@ import {
 
 const menuGroups = [
   {
-    label: '工作台',
+    label: '总览',
     items: [
       { name: '首页仪表盘', path: '/', icon: LayoutDashboard },
       { name: '待办中心', path: '/tasks', icon: CheckCircle2 },
     ],
   },
   {
-    label: '采购管理',
+    label: '公共数据',
     items: [
       { name: '品类中心', path: '/categories', icon: Layers },
       { name: '品类资料包', path: '/category-package', icon: FolderArchive },
@@ -45,15 +45,15 @@ const menuGroups = [
       { name: '报价对比', path: '/quote-compare', icon: Scale },
       { name: '供应商评分', path: '/scores', icon: Award },
       { name: '调研/考察记录', path: '/investigations', icon: SearchCode },
-    ],
-  },
-  {
-    label: '执行看板',
-    items: [
       { name: '供应商开发看板', path: '/development-board', icon: GitFork },
       { name: '采购执行看板', path: '/purchase-board', icon: ShoppingCart },
       { name: '经营驾驶舱', path: '/boss-report', icon: TrendingUp },
       { name: '销售/商务资料', path: '/sales-materials', icon: BookOpen },
+    ],
+  },
+  {
+    label: '个人数据',
+    items: [
       { name: '行政事项', path: '/admin-tasks', icon: CalendarClock },
     ],
   },
