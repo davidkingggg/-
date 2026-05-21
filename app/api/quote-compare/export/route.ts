@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const filter = {
       categoryId: searchParams.get('categoryId'),
+      productName: searchParams.get('productName'),
+      model: searchParams.get('model'),
       compareKey: searchParams.get('compareKey'),
       keyword: searchParams.get('keyword'),
       supplierId: searchParams.get('supplierId'),

@@ -1,9 +1,16 @@
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { calculatePriceMetrics } from '@/lib/price-utils'
+import {
+  createNormalizedTextWhere,
+  itemMatchesNormalizedTextFilters,
+  normalizeQuoteCompareValue,
+} from '@/lib/quote-compare-filters'
 
 export interface QuoteCompareFilter {
   categoryId?: string | null;
+  productName?: string | null;
+  model?: string | null;
   compareKey?: string | null;
   keyword?: string | null;
   supplierId?: string | null;
@@ -27,37 +34,57 @@ export async function getQuoteCompareData(filter: QuoteCompareFilter) {
     }
   }
 
-  if (filter.categoryId) {
-    where.categoryId = filter.categoryId;
-  }
-  
-  if (filter.compareKey) {
-    where.compareKey = filter.compareKey;
+  const categoryId = normalizeQuoteCompareValue(filter.categoryId)
+  const productName = normalizeQuoteCompareValue(filter.productName)
+  const model = normalizeQuoteCompareValue(filter.model)
+  const compareKey = normalizeQuoteCompareValue(filter.compareKey)
+  const keyword = normalizeQuoteCompareValue(filter.keyword)
+  const supplierId = normalizeQuoteCompareValue(filter.supplierId)
+  const quoteStage = normalizeQuoteCompareValue(filter.quoteStage)
+  const startDate = normalizeQuoteCompareValue(filter.startDate)
+  const endDate = normalizeQuoteCompareValue(filter.endDate)
+
+  if (categoryId) {
+    where.categoryId = categoryId;
   }
 
-  if (filter.keyword) {
+  const productNameWhere = createNormalizedTextWhere(productName)
+  if (productNameWhere) {
+    where.productName = productNameWhere;
+  }
+
+  const modelWhere = createNormalizedTextWhere(model)
+  if (modelWhere) {
+    where.model = modelWhere;
+  }
+  
+  if (compareKey) {
+    where.compareKey = compareKey;
+  }
+
+  if (keyword) {
     where.OR = [
-      { productName: { contains: filter.keyword } },
-      { model: { contains: filter.keyword } },
+      { productName: { contains: keyword } },
+      { model: { contains: keyword } },
     ];
   }
 
-  if (filter.supplierId) {
-    where.supplierId = filter.supplierId;
+  if (supplierId) {
+    where.supplierId = supplierId;
   }
 
-  if (filter.quoteStage) {
+  if (quoteStage) {
     where.quoteSheet = {
       ...(where.quoteSheet as Prisma.QuoteSheetWhereInput),
-      quoteStage: filter.quoteStage,
+      quoteStage,
     }
   }
 
-  if (filter.startDate || filter.endDate) {
+  if (startDate || endDate) {
     const dateFilter: Prisma.DateTimeFilter = {}
-    if (filter.startDate) dateFilter.gte = new Date(filter.startDate)
-    if (filter.endDate) {
-      const end = new Date(filter.endDate)
+    if (startDate) dateFilter.gte = new Date(startDate)
+    if (endDate) {
+      const end = new Date(endDate)
       end.setHours(23, 59, 59, 999)
       dateFilter.lte = end
     }
@@ -68,7 +95,7 @@ export async function getQuoteCompareData(filter: QuoteCompareFilter) {
   }
 
   // 2. Query raw items
-  const items = await prisma.quoteItem.findMany({
+  const queriedItems = await prisma.quoteItem.findMany({
     where,
     include: {
       quoteSheet: true,
@@ -80,6 +107,8 @@ export async function getQuoteCompareData(filter: QuoteCompareFilter) {
       { createdAt: 'desc' },
     ]
   });
+
+  const items = queriedItems.filter((item) => itemMatchesNormalizedTextFilters(item, { productName, model }))
 
   // 3. Group and find representative quote per supplier per compareKey
   // Map<compareKey, Map<supplierId, QuoteItem>>

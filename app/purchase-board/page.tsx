@@ -362,7 +362,7 @@ function PurchaseBoardContent() {
                           <div className="text-[11px] font-medium text-blue-700 mt-1">金额: ¥{Number(item.purchaseAmount).toLocaleString()}</div>
                         )}
                         <div className="flex gap-1.5 text-[11px] flex-wrap mt-2 mb-2">
-                          <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{item.owner?.name || '无负责人'}</span>
+                          <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{item.requester?.name || '无需求提交人'}</span>
                           <span className={`px-1.5 py-0.5 rounded ${item.priority === '高' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>{item.priority || '中'}</span>
                           {item.dueDate && <span className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">{new Date(item.dueDate).toLocaleDateString().slice(5)} 截止</span>}
                         </div>
