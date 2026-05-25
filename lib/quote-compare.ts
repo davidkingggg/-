@@ -6,6 +6,11 @@ import {
   itemMatchesNormalizedTextFilters,
   normalizeQuoteCompareValue,
 } from '@/lib/quote-compare-filters'
+import {
+  normalizeQuoteCompareSortMode,
+  sortQuoteCompareGroups,
+  type QuoteCompareSortMode,
+} from '@/lib/quote-compare-sort'
 
 export interface QuoteCompareFilter {
   categoryId?: string | null;
@@ -17,6 +22,7 @@ export interface QuoteCompareFilter {
   quoteStage?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  sortMode?: QuoteCompareSortMode | string | null;
 }
 
 export async function getQuoteCompareData(filter: QuoteCompareFilter) {
@@ -43,6 +49,7 @@ export async function getQuoteCompareData(filter: QuoteCompareFilter) {
   const quoteStage = normalizeQuoteCompareValue(filter.quoteStage)
   const startDate = normalizeQuoteCompareValue(filter.startDate)
   const endDate = normalizeQuoteCompareValue(filter.endDate)
+  const sortMode = normalizeQuoteCompareSortMode(filter.sortMode)
 
   if (categoryId) {
     where.categoryId = categoryId;
@@ -145,8 +152,5 @@ export async function getQuoteCompareData(filter: QuoteCompareFilter) {
     };
   });
 
-  // Sort result by compareKey
-  result.sort((a, b) => a.compareKey.localeCompare(b.compareKey));
-
-  return result;
+  return sortQuoteCompareGroups(result, sortMode);
 }
