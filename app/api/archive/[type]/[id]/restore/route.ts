@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { syncSupplierRecommendedLevel } from '@/lib/score-utils'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 type PrismaDelegate = { findUnique: (args: unknown) => Promise<Record<string, unknown> | null>; update: (args: unknown) => Promise<unknown> }
 
@@ -26,6 +27,7 @@ export async function POST(
   { params }: { params: Promise<{ type: string; id: string }> }
 ) {
   try {
+    await requireUser()
     const { type, id } = await params
     const modelName = RESTORE_TYPE_WHITELIST[type]
 
@@ -57,14 +59,21 @@ export async function POST(
     // SupplierScore 恢复后同步供应商推荐等级
     if (type === 'supplierscore' && record.supplierId) {
       try {
+    await requireUser()
         await syncSupplierRecommendedLevel(record.supplierId as string)
-      } catch {
+      } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
         // 同步失败不影响恢复结果
       }
     }
 
     return NextResponse.json({ success: true })
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '恢复归档记录失败' }, { status: 500 })
   }
 }

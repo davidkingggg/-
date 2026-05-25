@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 type PrismaDelegate = { findMany: (args: unknown) => Promise<Record<string, unknown>[]> }
 
@@ -90,6 +91,7 @@ function toRecord(r: Record<string, unknown>, type: string): ArchiveRecord {
 
 export async function GET(request: NextRequest) {
   try {
+    await requireUser()
     const type = request.nextUrl.searchParams.get('type')
 
     if (type && !ARCHIVE_TYPE_WHITELIST[type]) {
@@ -126,7 +128,10 @@ export async function GET(request: NextRequest) {
       new Date(b.archivedAt as string).getTime() - new Date(a.archivedAt as string).getTime()
     )
     return NextResponse.json(results)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '获取归档记录失败' }, { status: 500 })
   }
 }

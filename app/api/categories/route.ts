@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 export async function GET(request: NextRequest) {
   try {
+    await requireUser()
     const { searchParams } = new URL(request.url)
     const isPriority = searchParams.get('isPriority')
     const type = searchParams.get('type')
@@ -17,7 +19,10 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
     return NextResponse.json(categories)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '获取品类列表失败' }, { status: 500 })
   }
 }
@@ -44,6 +49,7 @@ function validateLevels(body: {
 
 export async function POST(request: Request) {
   try {
+    await requireUser()
     const body = await request.json()
 
     if (!body.name || !body.name.trim()) {
@@ -67,13 +73,17 @@ export async function POST(request: Request) {
       },
     })
     return NextResponse.json(category, { status: 201 })
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '新增品类失败' }, { status: 500 })
   }
 }
 
 export async function PUT(request: Request) {
   try {
+    await requireUser()
     const body = await request.json()
 
     if (!body.id || typeof body.id !== 'string') {
@@ -106,13 +116,17 @@ export async function PUT(request: Request) {
       },
     })
     return NextResponse.json(category)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '编辑品类失败' }, { status: 500 })
   }
 }
 
 export async function PATCH(request: Request) {
   try {
+    await requireUser()
     const body = await request.json()
 
     if (!body.id || typeof body.id !== 'string') {
@@ -132,7 +146,10 @@ export async function PATCH(request: Request) {
       },
     })
     return NextResponse.json(category)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '归档品类失败' }, { status: 500 })
   }
 }

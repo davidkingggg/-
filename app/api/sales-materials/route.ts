@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 import {
   buildSalesMaterialWhere,
   isValidTargetAudience,
@@ -36,6 +37,7 @@ function readSalesMaterialBody(body: Record<string, unknown>) {
 
 export async function GET(request: NextRequest) {
   try {
+    await requireUser()
     const materials = await prisma.salesMaterial.findMany({
       where: buildSalesMaterialWhere(new URL(request.url).searchParams),
       include: { category: { select: { id: true, name: true } } },
@@ -46,13 +48,17 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json(materials)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '获取销售/商务资料列表失败' }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
+    await requireUser()
     const body = await request.json()
     const result = readSalesMaterialBody(body)
 
@@ -75,7 +81,10 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(material, { status: 201 })
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '新增销售/商务资料失败' }, { status: 500 })
   }
 }

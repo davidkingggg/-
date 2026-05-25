@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma as db } from "@/lib/db";
 import { calculateTotalScore, calculateSystemLevel, calculateFinalLevel, syncSupplierRecommendedLevel, ScoreInput } from "@/lib/score-utils";
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id } = await params;
     const score = await db.supplierScore.findUnique({
       where: { id },
@@ -23,6 +25,9 @@ export async function GET(
 
     return NextResponse.json(score);
   } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     console.error("GET /api/scores/[id] error:", error);
     return NextResponse.json({ error: "获取评分详情失败" }, { status: 500 });
   }
@@ -33,6 +38,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id } = await params;
     const body = await request.json();
     
@@ -90,6 +96,9 @@ export async function PUT(
 
     return NextResponse.json(score);
   } catch (error: unknown) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     console.error("PUT /api/scores/[id] error:", error);
     return NextResponse.json({ error: (error as Error).message || "更新评分失败" }, { status: 400 });
   }
@@ -100,6 +109,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id } = await params;
     const body = await request.json();
     
@@ -118,6 +128,9 @@ export async function PATCH(
     
     return NextResponse.json({ error: "不支持的操作" }, { status: 400 });
   } catch (error: unknown) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     console.error("PATCH /api/scores/[id] error:", error);
     return NextResponse.json({ error: "操作失败" }, { status: 500 });
   }

@@ -4,6 +4,12 @@
 
 ## [Unreleased] - 2026-05-21
 
+### Added
+- **Agent 长期 Token 接入**:
+  - 新增 `AgentApiToken` 与 `AgentApiLog`，支持内部 agent 使用 Bearer Token 调用现有 REST API。
+  - 新增 `/agent-tokens` 管理页，管理员可创建、停用、启用、重置 Token，明文 Token 仅展示一次。
+  - `getCurrentUser` / `requireUser` / `requireAdmin` 支持 Bearer Token；非公开 API route 增加显式鉴权保护。
+
 ### Changed
 - **报价对比筛选联动**:
   - `/quote-compare` 筛选栏改为按品类下已有报价明细逐级联动，支持“品类 → 产品 → 型号 → 关键词/规格”分支选择。

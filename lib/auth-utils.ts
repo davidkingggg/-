@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs'
+import { headers } from 'next/headers'
 import { prisma } from './db'
 import { getSession } from './session'
+import { findActiveAgentApiToken, isAgentApiTokenValue, logAgentApiUse } from './agent-api-tokens'
 
 export const AUTH_ERROR = '未登录'
 export const ADMIN_ERROR = '需要管理员权限'
@@ -33,6 +35,36 @@ export function isPersonBindingError(error: unknown): boolean {
 }
 
 export async function getCurrentUser() {
+  const headerStore = await headers()
+  const authorization = headerStore.get('authorization')
+  const bearerPrefix = 'Bearer '
+  const rawToken = authorization?.startsWith(bearerPrefix) ? authorization.slice(bearerPrefix.length).trim() : null
+
+  if (isAgentApiTokenValue(rawToken)) {
+    const token = await findActiveAgentApiToken(rawToken)
+    if (!token) return null
+
+    const user = token.user.person && !token.user.person.isActive
+      ? {
+          ...token.user,
+          personId: null,
+          person: null,
+        }
+      : token.user
+
+    const method = headerStore.get('x-request-method') || 'UNKNOWN'
+    const path = headerStore.get('x-request-path') || 'UNKNOWN'
+    await logAgentApiUse({
+      tokenId: token.id,
+      userId: token.userId,
+      method,
+      path,
+      statusCode: null,
+    }).catch(() => undefined)
+
+    return user
+  }
+
   const session = await getSession()
   if (!session.userId) return null
 

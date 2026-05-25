@@ -276,6 +276,33 @@
 - `createdAt`: 创建时间
 - `updatedAt`: 更新时间
 
+## 13.2 Agent API Token 表：AgentApiToken
+用于给 Codex、Claude Code CLI、OpenClaw 等内部 agent 授权调用 REST API。
+- `id`: 主键
+- `name`: Token 名称
+- `tokenPrefix`: Token 前缀（用于识别，不是完整明文）
+- `tokenHash`: Token 哈希（唯一；不保存明文）
+- `userId`: 绑定登录账号
+- `isActive`: 是否启用
+- `lastUsedAt`: 最近使用时间
+- `revokedAt`: 停用时间
+- `createdAt`: 创建时间
+- `updatedAt`: 更新时间
+
+> 明文 Token 仅在创建或重置时返回一次。Token 权限等同绑定用户；管理员接口仍要求绑定用户具备管理员权限。
+
+## 13.3 Agent API 审计日志表：AgentApiLog
+记录 agent token 的 API 使用痕迹，不保存完整请求体。
+- `id`: 主键
+- `tokenId`: 关联 AgentApiToken，可空
+- `userId`: 关联 User，可空
+- `method`: HTTP 方法
+- `path`: 请求路径
+- `statusCode`: 响应状态码或授权记录状态
+- `targetType`: 目标对象类型，可空
+- `targetId`: 目标对象 ID，可空
+- `createdAt`: 创建时间
+
 ## 14. 附件表：Attachment
 统一管理各类文件的本地路径关联，避免各表单独设置 filePath 导致混乱。
 - `id`: 主键

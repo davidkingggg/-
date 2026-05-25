@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 import {
   createNormalizedTextWhere,
   matchesNormalizedText,
@@ -59,6 +60,7 @@ function buildWhere(searchParams: URLSearchParams, omit?: FilterKey): Prisma.Quo
 
 export async function GET(request: NextRequest) {
   try {
+    await requireUser()
     const { searchParams } = new URL(request.url)
     const productName = value(searchParams, 'productName')
     const model = value(searchParams, 'model')
@@ -163,6 +165,9 @@ export async function GET(request: NextRequest) {
       quoteStages: Array.from(stageSet).sort((a, b) => a.localeCompare(b, 'zh-CN')),
     })
   } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     console.error('Failed to get quote compare options:', error)
     return NextResponse.json({ error: '获取报价对比筛选项失败' }, { status: 500 })
   }

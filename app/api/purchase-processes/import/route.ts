@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { parseCSV, parseDate, parseDecimal, type RowError } from '@/lib/csv-utils'
 import { isValidEnum } from '@/lib/workflow-validation'
 import { PURCHASE_STAGES, PRIORITIES, PURCHASE_STATUSES } from '@/lib/workflow-constants'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 const SOURCE_TAG = '审批CSV导入'
 
@@ -63,6 +64,7 @@ function simpleFailure(message: string, suggestion: string, status = 400) {
 
 export async function POST(request: NextRequest) {
   try {
+    await requireUser()
     const body: ImportBody = await request.json()
     const {
       csvText,
@@ -367,6 +369,9 @@ export async function POST(request: NextRequest) {
       createdSuppliers,
     })
   } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     console.error('Purchase import error:', error)
     return NextResponse.json({
       success: false,

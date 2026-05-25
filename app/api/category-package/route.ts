@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { buildCategoryPackage } from '@/lib/category-package-utils'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
+    await requireUser()
     const { searchParams } = request.nextUrl
     const categoryId = searchParams.get('categoryId')
 
@@ -25,6 +27,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data)
   } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     const message = error instanceof Error ? error.message : '生成资料包失败'
     const status = message === '品类不存在或已归档' ? 404 : 500
     return NextResponse.json({ error: message }, { status })

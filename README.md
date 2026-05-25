@@ -84,6 +84,7 @@ npm run prisma:seed
 ### 运维管理
 - **归档管理** (`/archive`)：统一查看已归档记录，支持按类型筛选和单条恢复
 - **附件路径中心** (`/attachments`)：统一查看附件路径记录，按类型/关键词筛选，编辑基础字段，不处理物理文件
+- **Agent Token** (`/agent-tokens`)：管理员为 Claude Code CLI、Codex 等内部 agent 创建长期 Bearer Token
 
 ## 8. CSV 导入导出说明
 
@@ -108,6 +109,26 @@ CSV 导出统一使用中文表头、UTF-8 BOM 和标准 CSV 转义，便于 Exc
 - 报价明细导入模板：`/api/csv-templates?type=quote-items`
 - 供应商导入模板：`/api/csv-templates?type=suppliers`
 - 采购审批导入模板：`/api/csv-templates?type=purchase-processes`
+
+## 8.1 Agent API 调用示例
+
+管理员可在 `/agent-tokens` 创建长期 Token。明文 Token 只展示一次，Claude Code CLI 或其他内部 agent 调用现有 REST API 时使用 Bearer 认证：
+
+```bash
+curl -X POST "$APP_URL/api/admin-tasks" \
+  -H "Authorization: Bearer pw_agent_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "公司例会组织准备并整理会议纪要",
+    "type": "会议",
+    "priority": "中",
+    "dueDate": "2026-05-25",
+    "status": "进行中",
+    "notes": "今天早上的行政工作"
+  }'
+```
+
+Token 权限等同绑定用户。普通用户 Token 不能访问管理员接口；行政事项会自动归属到绑定用户对应的人员。
 
 ## 9. 本地备份恢复
 

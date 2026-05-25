@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 import {
   parseCSV,
   parseBoolean,
@@ -188,6 +189,7 @@ function checkQuoteNumberConsistency(rows: ParsedRow[]) {
 
 export async function POST(request: Request) {
   try {
+    await requireUser()
     const body = await request.json()
     const csvText = body.csvText as string
 
@@ -588,6 +590,9 @@ export async function POST(request: Request) {
       totalRows: rows.length,
     })
   } catch (e) {
+    if (isAuthError(e)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     console.error('CSV import error:', e)
     const message = '导入失败：' + (e instanceof Error ? e.message : '未知错误')
     return validationFailure(message, [

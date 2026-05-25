@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 const VALID_ROLES = ['总经理助理', '老板', '销售', '商务', '工程师', '采购需求提交人', '行政', '其他']
 
 export async function GET(request: NextRequest) {
   try {
+    await requireUser()
     const { searchParams } = new URL(request.url)
     const role = searchParams.get('role')
     const department = searchParams.get('department')
@@ -18,13 +20,17 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
     return NextResponse.json(people)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '获取人员列表失败' }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
+    await requireUser()
     const body = await request.json()
 
     if (!body.name || !body.name.trim()) {
@@ -49,7 +55,10 @@ export async function POST(request: Request) {
       },
     })
     return NextResponse.json(person, { status: 201 })
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '新增人员失败' }, { status: 500 })
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 const VALID_COOPERATION = ['强', '一般', '弱', '未确认']
 const VALID_PRICE_LEVELS = ['高', '中', '低', '未知']
@@ -10,6 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id } = await params
 
     const supplier = await prisma.supplier.findUnique({
@@ -31,7 +33,10 @@ export async function GET(
     }
 
     return NextResponse.json(supplier)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '获取供应商详情失败' }, { status: 500 })
   }
 }
@@ -41,6 +46,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id } = await params
     const body = await request.json()
 
@@ -107,7 +113,10 @@ export async function PUT(
       },
     })
     return NextResponse.json(supplier)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '编辑供应商失败' }, { status: 500 })
   }
 }
@@ -117,6 +126,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id } = await params
 
     const existing = await prisma.supplier.findUnique({ where: { id } })
@@ -132,7 +142,10 @@ export async function PATCH(
       },
     })
     return NextResponse.json(supplier)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '归档供应商失败' }, { status: 500 })
   }
 }

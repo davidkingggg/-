@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 const VALID_SOURCE_TYPES = ['微信', '图片', 'PDF', 'Excel', '口头', '其他']
 const VALID_QUOTE_STAGES = ['初次报价', '二次议价', '最终确认价', '量大优惠价']
 
 export async function GET(request: NextRequest) {
   try {
+    await requireUser()
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')
     const supplierId = searchParams.get('supplierId')
@@ -36,13 +38,17 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
     return NextResponse.json(quotes)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '获取报价单列表失败' }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
+    await requireUser()
     const body = await request.json()
 
     if (!body.supplierId) {
@@ -157,7 +163,10 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json(quote, { status: 201 })
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '新增报价单失败' }, { status: 500 })
   }
 }

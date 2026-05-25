@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 // PUT: 覆盖式更新供应商风险标签（先删旧关联，再建新关联）
 export async function PUT(
@@ -7,6 +8,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id } = await params
     const body = await request.json()
 
@@ -49,7 +51,10 @@ export async function PUT(
     })
 
     return NextResponse.json(updated)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '更新风险标签失败' }, { status: 500 })
   }
 }

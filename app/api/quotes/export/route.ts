@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 import {
   createCSVResponse,
   formatCSVBoolean,
@@ -18,6 +19,7 @@ const HEADERS = [
 
 export async function GET() {
   try {
+    await requireUser()
     const items = await prisma.quoteItem.findMany({
       where: {
         isArchived: false,
@@ -89,7 +91,10 @@ export async function GET() {
     }
 
     return createCSVResponse(rows, `quotes_export_${new Date().toISOString().slice(0, 10)}.csv`)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '导出失败' }, { status: 500 })
   }
 }

@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id } = await params
 
     const supplier = await prisma.supplier.findUnique({ where: { id } })
@@ -18,7 +20,10 @@ export async function GET(
       orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
     })
     return NextResponse.json(contacts)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '获取联系人列表失败' }, { status: 500 })
   }
 }
@@ -28,6 +33,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id } = await params
     const body = await request.json()
 
@@ -53,7 +59,10 @@ export async function POST(
       },
     })
     return NextResponse.json(contact, { status: 201 })
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '新增联系人失败' }, { status: 500 })
   }
 }

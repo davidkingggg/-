@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 // GET - 获取某报价单的所有明细
 export async function GET(
@@ -7,13 +8,17 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id } = await params
     const items = await prisma.quoteItem.findMany({
       where: { quoteSheetId: id, isArchived: false },
       orderBy: { createdAt: 'asc' },
     })
     return NextResponse.json(items)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '获取报价明细失败' }, { status: 500 })
   }
 }
@@ -24,6 +29,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id } = await params
     const body = await request.json()
 
@@ -58,7 +64,10 @@ export async function POST(
     })
 
     return NextResponse.json(item, { status: 201 })
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '新增报价明细失败' }, { status: 500 })
   }
 }
@@ -69,6 +78,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id: quoteSheetId } = await params
     const body = await request.json()
 
@@ -103,7 +113,10 @@ export async function PUT(
     })
 
     return NextResponse.json(item)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '更新报价明细失败' }, { status: 500 })
   }
 }
@@ -114,6 +127,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id: quoteSheetId } = await params
     const { searchParams } = new URL(request.url)
     const itemId = searchParams.get('itemId')
@@ -135,7 +149,10 @@ export async function PATCH(
     })
 
     return NextResponse.json({ success: true })
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '归档报价明细失败' }, { status: 500 })
   }
 }

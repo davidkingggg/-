@@ -9,9 +9,11 @@ import {
   isValidAmount,
 } from '@/lib/workflow-validation';
 import { PURCHASE_STAGES, PRIORITIES, PURCHASE_STATUSES } from '@/lib/workflow-constants';
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await requireUser()
     const { id } = await params;
     const item = await prisma.purchaseExecutionProcess.findUnique({
       where: { id },
@@ -30,6 +32,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     return NextResponse.json(item);
   } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     console.error('Error fetching purchase process:', error);
     return NextResponse.json({ error: '获取数据失败' }, { status: 500 });
   }
@@ -37,6 +42,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await requireUser()
     const { id } = await params;
     const body = await request.json();
     const {
@@ -141,6 +147,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     return NextResponse.json(item);
   } catch (error: unknown) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     console.error('Error updating purchase process:', error);
     const message = error instanceof Error ? error.message : '更新失败';
     return NextResponse.json({ error: message }, { status: 400 });
@@ -150,6 +159,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 // PATCH semantics restricted
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    await requireUser()
     const { id } = await params;
     const body = await request.json();
     const dataToUpdate: Record<string, unknown> = {};
@@ -198,6 +208,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     return NextResponse.json(item);
   } catch (error: unknown) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     console.error('Error patching purchase process:', error);
     const message = error instanceof Error ? error.message : '部分更新失败';
     return NextResponse.json({ error: message }, { status: 400 });

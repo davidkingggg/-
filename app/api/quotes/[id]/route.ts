@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 const VALID_SOURCE_TYPES = ['微信', '图片', 'PDF', 'Excel', '口头', '其他']
 const VALID_QUOTE_STAGES = ['初次报价', '二次议价', '最终确认价', '量大优惠价']
@@ -9,6 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id } = await params
     const quote = await prisma.quoteSheet.findUnique({
       where: { id },
@@ -32,7 +34,10 @@ export async function GET(
     })
 
     return NextResponse.json({ ...quote, attachments })
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '获取报价单详情失败' }, { status: 500 })
   }
 }
@@ -42,6 +47,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id } = await params
     const body = await request.json()
 
@@ -86,7 +92,10 @@ export async function PUT(
     })
 
     return NextResponse.json(quote)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '更新报价单失败' }, { status: 500 })
   }
 }
@@ -97,6 +106,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id } = await params
     const existing = await prisma.quoteSheet.findUnique({ where: { id } })
     if (!existing) {
@@ -109,7 +119,10 @@ export async function PATCH(
     })
 
     return NextResponse.json(quote)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '归档报价单失败' }, { status: 500 })
   }
 }

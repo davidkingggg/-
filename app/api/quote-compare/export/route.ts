@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getQuoteCompareData } from '@/lib/quote-compare'
 import { formatPrice } from '@/lib/price-utils'
 import { createCSVResponse, formatCSVBoolean, formatCSVDate, formatCSVPercent, type CSVValue } from '@/lib/csv-utils'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 export async function GET(request: NextRequest) {
   try {
+    await requireUser()
     const { searchParams } = new URL(request.url)
     const filter = {
       categoryId: searchParams.get('categoryId'),
@@ -68,6 +70,9 @@ export async function GET(request: NextRequest) {
 
     return createCSVResponse(rows, `quote_compare_${new Date().toISOString().split('T')[0]}.csv`)
   } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     console.error('Failed to export quote compare data:', error)
     return NextResponse.json({ error: '导出失败' }, { status: 500 })
   }

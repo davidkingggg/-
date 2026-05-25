@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "tsx scripts/test-hardening.ts",
+    "test": "tsx scripts/test-hardening.ts && tsx scripts/test-agent-api-token.ts",
     "data:health": "tsx scripts/check-data-health.ts",
     "backup:create": "tsx scripts/backup-db.ts",
     "backup:restore": "tsx scripts/restore-db.ts",

@@ -10,9 +10,11 @@ import {
   isValidAmount,
 } from '@/lib/workflow-validation';
 import { PURCHASE_STAGES, PRIORITIES, PURCHASE_STATUSES } from '@/lib/workflow-constants';
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 export async function GET(request: Request) {
   try {
+    await requireUser()
     const { searchParams } = new URL(request.url);
     const supplierId = searchParams.get('supplierId');
     const categoryId = searchParams.get('categoryId');
@@ -50,6 +52,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json(items);
   } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     console.error('Error fetching purchase processes:', error);
     return NextResponse.json({ error: '获取数据失败' }, { status: 500 });
   }
@@ -57,6 +62,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    await requireUser()
     const body = await request.json();
     const {
       title,
@@ -159,6 +165,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(item, { status: 201 });
   } catch (error: unknown) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     console.error('Error creating purchase process:', error);
     const message = error instanceof Error ? error.message : '创建失败';
     return NextResponse.json({ error: message }, { status: 400 });

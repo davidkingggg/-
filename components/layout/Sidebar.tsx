@@ -25,6 +25,7 @@ import {
   Archive,
   Paperclip,
   Settings,
+  KeyRound,
 } from 'lucide-react'
 
 const menuGroups = [
@@ -68,6 +69,7 @@ const menuGroups = [
       { name: '附件路径中心', path: '/attachments', icon: Paperclip },
       { name: '系统设置', path: '/settings', icon: Settings },
       { name: '用户管理', path: '/users', icon: Users, adminOnly: true },
+      { name: 'Agent Token', path: '/agent-tokens', icon: KeyRound, adminOnly: true },
     ],
   },
 ]

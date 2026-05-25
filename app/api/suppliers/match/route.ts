@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 /**
  * POST /api/suppliers/match
@@ -19,6 +20,7 @@ import { prisma } from '@/lib/db'
  */
 export async function POST(request: NextRequest) {
   try {
+    await requireUser()
     const body = await request.json()
     const name = (body.name ?? '').trim()
     const contactName = (body.contactName ?? '').trim()
@@ -95,7 +97,10 @@ export async function POST(request: NextRequest) {
         source: supplier.source,
       })),
     })
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '供应商匹配失败' }, { status: 500 })
   }
 }

@@ -5,11 +5,13 @@ import {
   parseDataQualityFilters,
 } from '@/lib/data-quality-utils'
 import { buildCSVContent } from '@/lib/csv-utils'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   try {
+    await requireUser()
     const filters = parseDataQualityFilters(request)
     const data = await buildDataQualityReport(filters)
     const csvContent = buildCSVContent(buildDataQualityCsvRows(data))
@@ -22,6 +24,9 @@ export async function GET(request: Request) {
       },
     })
   } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     const message = error instanceof Error ? error.message : '导出数据质量检查结果失败'
     const status = message.includes('无效') || message.includes('必须') ? 400 : 500
     return NextResponse.json({ error: message }, { status })

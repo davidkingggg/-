@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 
 const RELATED_TYPE_LABELS: Record<string, string> = {
   QuoteSheet: '报价单',
@@ -38,6 +39,7 @@ function deriveFileType(filePath: string, fileName: string, fileTypeInput: strin
 
 export async function GET(request: NextRequest) {
   try {
+    await requireUser()
     const { searchParams } = request.nextUrl
     const relatedType = searchParams.get('relatedType')
     const relatedId = searchParams.get('relatedId')
@@ -85,7 +87,10 @@ export async function GET(request: NextRequest) {
       relatedTypes: typeSet.map((t) => t.relatedType).filter(Boolean),
       fileTypes: fileTypeSet.map((t) => t.fileType).filter(Boolean),
     })
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '获取附件记录失败' }, { status: 500 })
   }
 }
@@ -93,6 +98,7 @@ export async function GET(request: NextRequest) {
 // POST - 新增附件记录（当前仅支持 Supplier 路径关联，非文件上传）
 export async function POST(request: NextRequest) {
   try {
+    await requireUser()
     const body = await request.json()
     const relatedType = normalizeString(body.relatedType)
     const relatedId = normalizeString(body.relatedId)
@@ -139,7 +145,10 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json(attachment, { status: 201 })
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '新增附件记录失败' }, { status: 500 })
   }
 }

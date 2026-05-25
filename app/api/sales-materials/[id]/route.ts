@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 import {
   isValidTargetAudience,
   normalizeOptionalText,
@@ -38,6 +39,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id } = await params
     const existing = await prisma.salesMaterial.findUnique({ where: { id } })
 
@@ -64,7 +66,10 @@ export async function PUT(
     })
 
     return NextResponse.json(material)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '编辑销售/商务资料失败' }, { status: 500 })
   }
 }
@@ -81,6 +86,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireUser()
     const { id } = await params
     const existing = await prisma.salesMaterial.findUnique({ where: { id } })
 
@@ -98,7 +104,10 @@ export async function DELETE(
     })
 
     return NextResponse.json(material)
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return NextResponse.json({ error: '归档销售/商务资料失败' }, { status: 500 })
   }
 }

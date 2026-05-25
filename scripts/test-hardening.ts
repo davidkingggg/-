@@ -57,7 +57,8 @@ const checks: Check[] = [
     name: 'package scripts exist',
     run: () => {
       const scripts = packageJson().scripts ?? {}
-      assert(scripts.test === 'tsx scripts/test-hardening.ts', 'package.json scripts.test must run tsx scripts/test-hardening.ts')
+      assert(scripts.test?.includes('tsx scripts/test-hardening.ts'), 'package.json scripts.test must run tsx scripts/test-hardening.ts')
+      assert(scripts.test?.includes('tsx scripts/test-agent-api-token.ts'), 'package.json scripts.test must run tsx scripts/test-agent-api-token.ts')
       ;['data:health', 'backup:create', 'backup:restore'].forEach((scriptName) => {
         assert(typeof scripts[scriptName] === 'string' && scripts[scriptName].length > 0, `Missing package script: ${scriptName}`)
       })

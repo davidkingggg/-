@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 import {
   parseCSV,
   parseBooleanOptional,
@@ -189,6 +190,7 @@ function parseRow(
 
 export async function POST(request: NextRequest) {
   try {
+    await requireUser()
     const body = await request.json()
     const csvText = body.csvText
 
@@ -346,7 +348,10 @@ export async function POST(request: NextRequest) {
       count: created.length,
       suppliers: created,
     })
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     return validationFailure('供应商导入失败', [
       rowError(1, '文件', '', '供应商导入失败', '请稍后重试，或检查 CSV 文件内容是否符合模板'),
     ], 500)
