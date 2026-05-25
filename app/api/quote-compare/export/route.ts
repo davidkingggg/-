@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
       quoteStage: searchParams.get('quoteStage'),
       startDate: searchParams.get('startDate'),
       endDate: searchParams.get('endDate'),
+      sortMode: searchParams.get('sortMode'),
     }
 
     const data = await getQuoteCompareData(filter)

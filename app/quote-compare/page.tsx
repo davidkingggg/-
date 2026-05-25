@@ -16,6 +16,7 @@ type FilterState = {
   quoteStage: string
   startDate: string
   endDate: string
+  sortMode: string
 }
 
 type FilterOptions = {
@@ -35,6 +36,7 @@ const emptyFilter: FilterState = {
   quoteStage: '',
   startDate: '',
   endDate: '',
+  sortMode: '',
 }
 
 const emptyOptions: FilterOptions = {
@@ -54,6 +56,7 @@ function appendFilterParams(query: URLSearchParams, filter: FilterState) {
   if (filter.quoteStage) query.append('quoteStage', filter.quoteStage)
   if (filter.startDate) query.append('startDate', filter.startDate)
   if (filter.endDate) query.append('endDate', filter.endDate)
+  if (filter.sortMode) query.append('sortMode', filter.sortMode)
 }
 
 function normalizeOptions(options: Partial<FilterOptions> & { products?: CompareKeyOption[] }): FilterOptions {
@@ -85,7 +88,8 @@ export default function QuoteComparePage() {
       filter.supplierId ||
       filter.quoteStage ||
       filter.startDate ||
-      filter.endDate
+      filter.endDate ||
+      filter.sortMode
     ),
     [filter]
   )
@@ -199,7 +203,7 @@ export default function QuoteComparePage() {
       </div>
 
       <div className="rounded-2xl bg-white border border-[#e5eaf3] p-5 mb-4" style={{ boxShadow: '0 6px 18px rgba(15, 23, 42, 0.04)' }}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-9 gap-3">
           <div>
             <label className={labelClass}>品类</label>
             <select
@@ -269,6 +273,20 @@ export default function QuoteComparePage() {
             >
               <option value="">全部阶段</option>
               {filterOptions.quoteStages.map((stage) => <option key={stage} value={stage}>{stage}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>排序方式</label>
+            <select
+              value={filter.sortMode}
+              onChange={(event) => updateFilter({ sortMode: event.target.value })}
+              className={selectClass}
+            >
+              <option value="">默认排序</option>
+              <option value="priceAsc">价格从低到高</option>
+              <option value="priceDesc">价格从高到低</option>
+              <option value="paramAsc">参数从小到大</option>
+              <option value="paramDesc">参数从大到小</option>
             </select>
           </div>
           <div>
