@@ -226,9 +226,16 @@
 - `title`: 事项名称
 - `type`: 类型（会议/周报/办公采购/接待等）
 - `ownerPersonId`: 归属人员（只展示给当前登录账号绑定的对应人员）
+- `createdByPersonId`: 创建人
+- `assigneePersonId`: 负责人，第一版默认等于当前登录人员
 - `priority`: 高 / 中 / 低
 - `dueDate`: 截止时间
+- `taskDate`: 事项所属日期，用于日历落点和日/周/月/年统计；旧数据由 `dueDate` 回填。
+- `startTime`: 可选开始时间，格式为 `HH:mm`。
+- `endTime`: 可选结束时间，格式为 `HH:mm`，必须晚于 `startTime`。
 - `isRecurring`: 是否重复事项
+- `recurrenceType`: 重复规则，取值为 `none` / `daily` / `weekly` / `monthly` / `yearly`。
+- `recurrenceEndDate`: 重复结束日期，可为空。
 - `status`: 未开始 / 进行中 / 已完成 / 暂停
 - `completedAt`: 完成时间
 - `notes`: 备注
@@ -236,6 +243,8 @@
 - `archivedAt`: 归档时间
 - `createdAt`: 创建时间
 - `updatedAt`: 更新时间
+
+> 说明：“行政事项归档”属于个人数据归档，仅本人可查看、恢复，并支持本人彻底删除自己的归档行政事项。
 
 ## 12. 销售/商务资料表：SalesMaterial
 用于生成对外销售/商务支持时的正式资料。
