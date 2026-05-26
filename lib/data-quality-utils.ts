@@ -61,6 +61,10 @@ export interface DataQualityFilters {
   limit: number
 }
 
+export interface DataQualityContext {
+  currentPersonId: string | null
+}
+
 const CHECK_KEYS: DataQualityCheckKey[] = [
   'duplicateSuppliers',
   'suppliersMissingContacts',
@@ -174,7 +178,7 @@ export function parseDataQualityFilters(request: Request): DataQualityFilters {
   }
 }
 
-export async function buildDataQualityReport(filters: DataQualityFilters): Promise<DataQualityResponse> {
+export async function buildDataQualityReport(filters: DataQualityFilters, context: DataQualityContext): Promise<DataQualityResponse> {
   const builders: Record<DataQualityCheckKey, () => Promise<DataQualityCheckResult>> = {
     duplicateSuppliers: () => buildDuplicateSuppliersCheck(filters),
     suppliersMissingContacts: () => buildSuppliersMissingContactsCheck(filters),
@@ -183,7 +187,7 @@ export async function buildDataQualityReport(filters: DataQualityFilters): Promi
     developmentMissingFollowUp: () => buildDevelopmentMissingFollowUpCheck(filters),
     purchaseMissingFollowUp: () => buildPurchaseMissingFollowUpCheck(filters),
     longPausedOrAbnormalOpenItems: () => buildLongPausedOrAbnormalOpenItemsCheck(filters),
-    overdueAdminTasks: () => buildOverdueAdminTasksCheck(filters),
+    overdueAdminTasks: () => buildOverdueAdminTasksCheck(filters, context),
     salesMaterialsMissingFormalText: () => buildSalesMaterialsMissingFormalTextCheck(filters),
   }
 
@@ -628,14 +632,16 @@ async function buildLongPausedOrAbnormalOpenItemsCheck(filters: DataQualityFilte
   return finishCheck(definition, [...developmentIssues, ...purchaseIssues], filters.limit)
 }
 
-async function buildOverdueAdminTasksCheck(filters: DataQualityFilters) {
+async function buildOverdueAdminTasksCheck(filters: DataQualityFilters, context: DataQualityContext) {
   const definition = CHECK_DEFINITIONS.overdueAdminTasks
   if (filters.categoryId) return finishCheck(definition, [], filters.limit)
+  if (!context.currentPersonId) return finishCheck(definition, [], filters.limit)
 
   const today = new Date()
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
   const tasks = await prisma.adminTask.findMany({
     where: {
+      ownerPersonId: context.currentPersonId,
       isArchived: false,
       dueDate: { lt: startOfToday },
       status: { not: ADMIN_DONE_STATUS },

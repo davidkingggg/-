@@ -6,9 +6,9 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
   try {
-    await requireUser()
+    const user = await requireUser()
     const filters = parseDataQualityFilters(request)
-    const data = await buildDataQualityReport(filters)
+    const data = await buildDataQualityReport(filters, { currentPersonId: user.personId ?? null })
     return NextResponse.json(data)
   } catch (error) {
     if (isAuthError(error)) {

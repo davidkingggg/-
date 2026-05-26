@@ -72,6 +72,30 @@ function assertAdminTaskDeleteSafeguards() {
   assertIncludes(source, 'isArchived: true', `${relativePath} must delete only archived tasks`)
 }
 
+function assertDataQualityAdminTaskSafeguards() {
+  const reportRoute = 'app/api/data-quality/route.ts'
+  const exportRoute = 'app/api/data-quality/export/route.ts'
+  const utilsPath = 'lib/data-quality-utils.ts'
+  const utils = read(utilsPath)
+
+  for (const relativePath of [reportRoute, exportRoute]) {
+    const source = read(relativePath)
+    assertIncludes(source, 'const user = await requireUser()', `${relativePath} must keep the authenticated user for personal data scoping`)
+    assert(
+      /buildDataQualityReport\(filters,\s*\{\s*currentPersonId:\s*user\.personId\s*\?\?\s*null\s*\}\)/.test(source),
+      `${relativePath} must pass the current bound person into data-quality checks`,
+    )
+  }
+
+  assertIncludes(utils, 'currentPersonId: string | null', `${utilsPath} must accept the current person scope`)
+  assertIncludes(utils, 'buildOverdueAdminTasksCheck(filters, context)', `${utilsPath} must pass person scope into the admin task quality check`)
+  assertIncludes(utils, 'if (!context.currentPersonId)', `${utilsPath} must omit personal admin task issues for unbound users`)
+  assert(
+    /prisma\.adminTask\.findMany\(\{\s*where:\s*\{[\s\S]*?ownerPersonId:\s*context\.currentPersonId/.test(utils),
+    `${utilsPath} must scope overdue admin task queries by ownerPersonId`,
+  )
+}
+
 async function fetchWithTimeout(path: string, init?: RequestInit) {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 2_000)
@@ -119,6 +143,7 @@ async function main() {
   assertAdminTaskDetailSafeguards()
   assertAdminTaskRestoreSafeguards()
   assertAdminTaskDeleteSafeguards()
+  assertDataQualityAdminTaskSafeguards()
 
   console.log('admin calendar archive static checks passed')
 
