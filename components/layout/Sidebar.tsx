@@ -56,6 +56,7 @@ const menuGroups = [
     label: '个人数据',
     items: [
       { name: '行政事项', path: '/admin-tasks', icon: CalendarClock },
+      { name: '行政事项归档', path: '/admin-task-archive', icon: Archive },
     ],
   },
   {
