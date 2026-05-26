@@ -142,6 +142,10 @@ function inDateRange(dueDate: Date | null, filters: TaskQueryFilters) {
   return true
 }
 
+function adminTaskDate(item: AdminTask) {
+  return item.taskDate ?? item.dueDate
+}
+
 function shouldIncludeItem(item: TaskItem, filters: TaskQueryFilters) {
   if (filters.scope === 'week') return item.isThisWeek
   if (filters.scope === 'overdue') return item.isOverdue
@@ -208,6 +212,8 @@ function mapPurchaseTask(item: PurchaseProcess): TaskItem {
 }
 
 function mapAdminTask(item: AdminTask): TaskItem {
+  const date = adminTaskDate(item)
+
   return {
     id: item.id,
     source: 'admin',
@@ -215,12 +221,12 @@ function mapAdminTask(item: AdminTask): TaskItem {
     title: item.title,
     ownerName: item.ownerPerson?.name || undefined,
     priority: item.priority || undefined,
-    dueDate: item.dueDate?.toISOString(),
+    dueDate: date?.toISOString(),
     status: item.status,
     currentStage: item.type,
     nextAction: item.notes || undefined,
-    isOverdue: isOverdue(item.dueDate),
-    isThisWeek: isThisWeekDue(item.dueDate),
+    isOverdue: isOverdue(date),
+    isThisWeek: isThisWeekDue(date),
     needBossDecision: false,
     needSalesSupport: false,
     href: '/admin-tasks',
@@ -294,7 +300,7 @@ export async function buildTaskAggregation(
 
   const adminItems = adminTasks
     .filter((item) => (filters.status ? true : isOpenTask({ ...item, source: 'admin' })))
-    .filter((item) => inDateRange(item.dueDate, filters))
+    .filter((item) => inDateRange(adminTaskDate(item), filters))
     .map(mapAdminTask)
 
   const allItems = [...developmentItems, ...purchaseItems, ...adminItems].filter((item) =>

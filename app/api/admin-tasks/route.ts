@@ -8,24 +8,21 @@ import {
   isPersonBindingError,
 } from '@/lib/auth-utils'
 import { ensureAdminTaskOwnerPersonId } from '@/lib/admin-task-auth'
+import {
+  normalizeRecurrence,
+  parseDateOnly,
+  parseTime,
+  startOfTodayUtcDateOnly,
+  validateTimeRange,
+} from '@/lib/admin-task-calendar'
 
 const VALID_PRIORITIES = ['高', '中', '低']
 const VALID_STATUSES = ['未开始', '进行中', '已完成', '暂停']
 
-function startOfTodayUtcDateOnly() {
-  const now = new Date()
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
-}
-
-function parseDueDate(value: unknown) {
-  if (value === undefined || value === null || value === '') return null
-  if (typeof value !== 'string') return undefined
-
-  const dateOnlyPattern = /^\d{4}-\d{2}-\d{2}$/
-  if (!dateOnlyPattern.test(value)) return undefined
-
-  const date = new Date(`${value}T00:00:00.000Z`)
-  return Number.isNaN(date.getTime()) ? undefined : date
+function addDays(date: Date, days: number) {
+  const next = new Date(date)
+  next.setUTCDate(next.getUTCDate() + days)
+  return next
 }
 
 function validateTaskBody(body: Record<string, unknown>) {
@@ -34,7 +31,12 @@ function validateTaskBody(body: Record<string, unknown>) {
   const priority = typeof body.priority === 'string' ? body.priority : ''
   const status = typeof body.status === 'string' ? body.status : ''
   const notes = typeof body.notes === 'string' ? body.notes.trim() : ''
-  const dueDate = parseDueDate(body.dueDate)
+  const taskDate = parseDateOnly(body.taskDate ?? body.dueDate)
+  const dueDate = parseDateOnly(body.dueDate ?? body.taskDate)
+  const startTime = parseTime(body.startTime)
+  const endTime = parseTime(body.endTime)
+  const recurrenceType = normalizeRecurrence(body.recurrenceType)
+  const recurrenceEndDate = parseDateOnly(body.recurrenceEndDate)
 
   if (!title) return { error: '事项名称不能为空' }
   if (!type) return { error: '类型不能为空' }
@@ -44,7 +46,16 @@ function validateTaskBody(body: Record<string, unknown>) {
   if (!status || !VALID_STATUSES.includes(status)) {
     return { error: `状态必须为以下之一：${VALID_STATUSES.join('、')}` }
   }
+  if (taskDate === null) return { error: '事项日期不能为空' }
+  if (taskDate === undefined) return { error: '事项日期格式不正确' }
   if (dueDate === undefined) return { error: '截止日期格式不正确' }
+  if (startTime === undefined) return { error: '开始时间格式不正确' }
+  if (endTime === undefined) return { error: '结束时间格式不正确' }
+  if (recurrenceType === undefined) return { error: '重复规则无效' }
+  if (recurrenceEndDate === undefined) return { error: '重复结束日期格式不正确' }
+
+  const timeRangeError = validateTimeRange(startTime, endTime)
+  if (timeRangeError) return { error: timeRangeError }
 
   return {
     data: {
@@ -53,8 +64,13 @@ function validateTaskBody(body: Record<string, unknown>) {
       priority: priority || null,
       status,
       dueDate,
+      taskDate,
+      startTime,
+      endTime,
+      recurrenceType,
+      recurrenceEndDate,
       notes: notes || null,
-      isRecurring: Boolean(body.isRecurring),
+      isRecurring: recurrenceType !== 'none',
     },
   }
 }
@@ -78,6 +94,12 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status')
     const priority = searchParams.get('priority')
     const overdue = searchParams.get('overdue')
+    const from = parseDateOnly(searchParams.get('from'))
+    const to = parseDateOnly(searchParams.get('to'))
+
+    if (from === undefined || to === undefined) {
+      return NextResponse.json({ error: '日期筛选格式不正确' }, { status: 400 })
+    }
 
     const where: Prisma.AdminTaskWhereInput = {
       isArchived: false,
@@ -86,20 +108,30 @@ export async function GET(request: NextRequest) {
     if (type) where.type = type
     if (status) where.status = status
     if (priority) where.priority = priority
+    if (from || to) {
+      where.taskDate = {
+        ...(from ? { gte: from } : {}),
+        ...(to ? { lt: addDays(to, 1) } : {}),
+      }
+    }
     if (overdue === 'true') {
-      where.dueDate = { lt: startOfTodayUtcDateOnly() }
-      where.status = { not: '已完成' }
+      where.OR = [
+        { taskDate: { lt: startOfTodayUtcDateOnly() } },
+        { taskDate: null, dueDate: { lt: startOfTodayUtcDateOnly() } },
+      ]
+      where.AND = [{ status: { not: '已完成' } }]
     } else if (overdue === 'false') {
       where.OR = [
-        { dueDate: null },
-        { dueDate: { gte: startOfTodayUtcDateOnly() } },
+        { taskDate: null, dueDate: null },
+        { taskDate: { gte: startOfTodayUtcDateOnly() } },
+        { taskDate: null, dueDate: { gte: startOfTodayUtcDateOnly() } },
         { status: '已完成' },
       ]
     }
 
     const tasks = await prisma.adminTask.findMany({
       where,
-      orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
+      orderBy: [{ taskDate: 'asc' }, { startTime: 'asc' }, { createdAt: 'desc' }],
     })
 
     return NextResponse.json(tasks)
@@ -124,6 +156,8 @@ export async function POST(request: Request) {
       data: {
         ...result.data,
         ownerPersonId,
+        createdByPersonId: ownerPersonId,
+        assigneePersonId: ownerPersonId,
         completedAt: result.data.status === '已完成' ? new Date() : null,
         isArchived: false,
         archivedAt: null,

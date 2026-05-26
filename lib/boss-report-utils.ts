@@ -174,6 +174,10 @@ function isOverdueOpen(item: { dueDate: Date | null; status: string }, today = n
   return startOfDay(item.dueDate) < startOfDay(today)
 }
 
+function adminTaskDate(item: { taskDate: Date | null; dueDate: Date | null }) {
+  return item.taskDate ?? item.dueDate
+}
+
 function hasCurrentProblem(value?: string | null) {
   return Boolean(value && value.trim())
 }
@@ -488,7 +492,7 @@ export async function buildBossReportData(filter: BossReportFilter = {}): Promis
             isArchived: false,
             ownerPersonId: currentPersonId,
           },
-          orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }],
+          orderBy: [{ taskDate: 'asc' }, { startTime: 'asc' }, { createdAt: 'desc' }],
         })
       : Promise.resolve([]),
   ])
@@ -556,17 +560,21 @@ export async function buildBossReportData(filter: BossReportFilter = {}): Promis
     personal: {
       personBound: Boolean(currentPersonId),
       adminOpenCount: personalAdminTasks.filter((item) => isOpenAdminStatus(item.status)).length,
-      adminWeekCount: personalAdminTasks.filter((item) => isOpenAdminStatus(item.status) && isThisWeekDue(item.dueDate)).length,
-      adminOverdueCount: personalAdminTasks.filter((item) => isOpenAdminStatus(item.status) && isOverdue(item.dueDate)).length,
-      adminItems: personalAdminTasks.slice(0, 6).map((item) => ({
-        id: item.id,
-        title: item.title,
-        type: item.type,
-        status: item.status,
-        priority: item.priority,
-        dueDate: item.dueDate?.toISOString() ?? null,
-        notes: item.notes,
-      })),
+      adminWeekCount: personalAdminTasks.filter((item) => isOpenAdminStatus(item.status) && isThisWeekDue(adminTaskDate(item))).length,
+      adminOverdueCount: personalAdminTasks.filter((item) => isOpenAdminStatus(item.status) && isOverdue(adminTaskDate(item))).length,
+      adminItems: personalAdminTasks.slice(0, 6).map((item) => {
+        const date = adminTaskDate(item)
+
+        return {
+          id: item.id,
+          title: item.title,
+          type: item.type,
+          status: item.status,
+          priority: item.priority,
+          dueDate: date?.toISOString() ?? null,
+          notes: item.notes,
+        }
+      }),
     },
   }
 
