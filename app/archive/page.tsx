@@ -23,7 +23,6 @@ const TYPE_OPTIONS = [
   { value: 'investigationrecord', label: '调研/考察记录' },
   { value: 'supplierdevelopmentprocess', label: '供应商开发流程' },
   { value: 'purchaseexecutionprocess', label: '采购执行流程' },
-  { value: 'admintask', label: '行政事项' },
   { value: 'salesmaterial', label: '销售/商务资料' },
 ]
 

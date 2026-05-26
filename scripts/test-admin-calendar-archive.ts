@@ -20,6 +20,25 @@ function assertIncludes(source: string, needle: string, message: string) {
   assert(source.includes(needle), message)
 }
 
+function assertExcludes(source: string, needle: string, message: string) {
+  assert(!source.includes(needle), message)
+}
+
+function assertGlobalArchiveExcludesAdminTask() {
+  const globalArchiveFiles = [
+    'app/api/archive/route.ts',
+    'app/api/archive/[type]/[id]/restore/route.ts',
+    'app/api/archive/delete/route.ts',
+    'app/archive/page.tsx',
+  ]
+
+  for (const relativePath of globalArchiveFiles) {
+    const source = read(relativePath)
+    assertExcludes(source, 'admintask', `${relativePath} must not expose admin tasks through the global archive`)
+    assertExcludes(source, 'adminTask', `${relativePath} must not operate on AdminTask through the global archive`)
+  }
+}
+
 function assertAdminTaskDetailSafeguards() {
   const relativePath = 'app/api/admin-tasks/[id]/route.ts'
   const source = read(relativePath)
@@ -35,8 +54,12 @@ function assertAdminTaskRestoreSafeguards() {
   assertUsesAdminTaskOwner(relativePath)
   assertIncludes(source, 'findOwnedArchivedAdminTask', `${relativePath} must restore only owned archived tasks`)
   assertIncludes(source, '确认恢复', `${relativePath} must require the restore confirmation phrase`)
+  assertIncludes(source, 'updateMany', `${relativePath} must use a guarded restore mutation`)
+  assertIncludes(source, 'ownerPersonId', `${relativePath} must scope restore mutation to the owner`)
+  assertIncludes(source, 'isArchived: true', `${relativePath} must restore only archived tasks`)
   assertIncludes(source, 'isArchived: false', `${relativePath} must unarchive the task`)
   assertIncludes(source, 'archivedAt: null', `${relativePath} must clear archive time`)
+  assertExcludes(source, 'prisma.adminTask.update({', `${relativePath} must not restore by raw id with update()`)
 }
 
 function assertAdminTaskDeleteSafeguards() {
@@ -90,6 +113,7 @@ async function tryHttpSmoke() {
 }
 
 async function main() {
+  assertGlobalArchiveExcludesAdminTask()
   assertUsesAdminTaskOwner('app/api/admin-task-archive/route.ts')
   assertUsesAdminTaskOwner('app/api/admin-tasks/route.ts')
   assertAdminTaskDetailSafeguards()

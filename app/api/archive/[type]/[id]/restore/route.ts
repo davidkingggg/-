@@ -18,7 +18,6 @@ const RESTORE_TYPE_WHITELIST: Record<string, string> = {
   investigationrecord: 'investigationRecord',
   supplierdevelopmentprocess: 'supplierDevelopmentProcess',
   purchaseexecutionprocess: 'purchaseExecutionProcess',
-  admintask: 'adminTask',
   salesmaterial: 'salesMaterial',
 }
 

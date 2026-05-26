@@ -44,10 +44,6 @@ const ARCHIVE_TYPE_WHITELIST: Record<string, {
     model: 'purchaseExecutionProcess',
     select: { id: true, title: true, archivedAt: true },
   },
-  admintask: {
-    model: 'adminTask',
-    select: { id: true, title: true, archivedAt: true },
-  },
   salesmaterial: {
     model: 'salesMaterial',
     select: { id: true, title: true, archivedAt: true },
@@ -63,7 +59,6 @@ const TYPE_LABELS: Record<string, string> = {
   investigationrecord: '调研/考察记录',
   supplierdevelopmentprocess: '供应商开发流程',
   purchaseexecutionprocess: '采购执行流程',
-  admintask: '行政事项',
   salesmaterial: '销售/商务资料',
 }
 

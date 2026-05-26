@@ -22,7 +22,6 @@ const DELETE_TYPE_WHITELIST: Record<string, string> = {
   investigationrecord: 'investigationRecord',
   supplierdevelopmentprocess: 'supplierDevelopmentProcess',
   purchaseexecutionprocess: 'purchaseExecutionProcess',
-  admintask: 'adminTask',
   salesmaterial: 'salesMaterial',
 }
 
@@ -37,7 +36,6 @@ const DELETE_ORDER: Record<string, number> = {
   quotesheet: 2,
   suppliercontact: 3,
   supplierrisktag: 3,
-  admintask: 10,
   attachment: 10,
   supplier: 20,
   category: 30,

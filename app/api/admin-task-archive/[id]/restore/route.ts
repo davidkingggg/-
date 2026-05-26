@@ -37,11 +37,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: '行政事项归档不存在' }, { status: 404 })
     }
 
-    const task = await prisma.adminTask.update({
-      where: { id },
+    const result = await prisma.adminTask.updateMany({
+      where: {
+        id,
+        ownerPersonId,
+        isArchived: true,
+      },
       data: {
         isArchived: false,
         archivedAt: null,
+      },
+    })
+
+    if (result.count === 0) {
+      return NextResponse.json({ error: '行政事项归档不存在' }, { status: 404 })
+    }
+
+    const task = await prisma.adminTask.findFirst({
+      where: {
+        id,
+        ownerPersonId,
+        isArchived: false,
       },
     })
 
