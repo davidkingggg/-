@@ -453,6 +453,11 @@ async function main() {
   const firstCategory = await prisma.category.findFirst({ where: { isArchived: false } })
   const defaultOwner = await prisma.person.findFirst({ where: { name: '李总助' } }) || await prisma.person.findFirst()
   const defaultRequester = await prisma.person.findFirst({ where: { name: '陈采购' } }) || defaultOwner
+  const defaultAdminPerson =
+    (await prisma.person.findFirst({ where: { role: '行政', isActive: true } })) ||
+    defaultOwner ||
+    (await prisma.person.findFirst({ where: { isActive: true } })) ||
+    (await prisma.person.findFirst())
 
   const ensureDevTask = async (data: {
     supplierName: string
@@ -552,20 +557,41 @@ async function main() {
   const ensureAdminTask = async (data: {
     title: string
     type: string
-    priority: string
+    priority?: string
     dueDate: Date
     status: string
     notes: string
+    taskDate?: Date
+    startTime?: string | null
+    endTime?: string | null
+    recurrenceType?: string
+    recurrenceEndDate?: Date | null
+    isRecurring?: boolean
+    isArchived?: boolean
+    archivedAt?: Date | null
   }) => {
+    if (!defaultAdminPerson) return
+
     const existing = await prisma.adminTask.findFirst({ where: { title: data.title, type: data.type } })
+    const recurrenceType = data.recurrenceType ?? 'none'
+    const isArchived = data.isArchived ?? false
     const taskData = {
+      ownerPersonId: defaultAdminPerson.id,
+      createdByPersonId: defaultAdminPerson.id,
+      assigneePersonId: defaultAdminPerson.id,
       priority: data.priority,
       dueDate: data.dueDate,
+      taskDate: data.taskDate ?? data.dueDate,
+      startTime: data.startTime ?? null,
+      endTime: data.endTime ?? null,
+      recurrenceType,
+      recurrenceEndDate: data.recurrenceEndDate ?? null,
+      isRecurring: data.isRecurring ?? recurrenceType !== 'none',
       status: data.status,
       notes: data.notes,
       completedAt: data.status === '已完成' ? data.dueDate : null,
-      isArchived: false,
-      archivedAt: null,
+      isArchived,
+      archivedAt: isArchived ? data.archivedAt ?? data.dueDate : null,
     }
 
     if (existing) {
@@ -663,6 +689,42 @@ async function main() {
       dueDate: dateFromMonday(0),
       status: '已完成',
       notes: '用于验证默认待办不展示已完成事项',
+    })
+    await ensureAdminTask({
+      title: '日历演示-无时间待办',
+      type: '会议',
+      priority: '中',
+      dueDate: new Date(Date.UTC(2026, 4, 26)),
+      status: '未开始',
+      notes: '用于验证日历中仅日期事项展示',
+      recurrenceType: 'none',
+      isRecurring: false,
+      isArchived: false,
+    })
+    await ensureAdminTask({
+      title: '日历演示-带时间接待',
+      type: '接待',
+      priority: '高',
+      dueDate: new Date(Date.UTC(2026, 4, 26)),
+      startTime: '09:30',
+      endTime: '10:30',
+      status: '进行中',
+      notes: '用于验证日历按时间展示接待事项',
+      recurrenceType: 'none',
+      isRecurring: false,
+      isArchived: false,
+    })
+    await ensureAdminTask({
+      title: '归档演示-已完成周报',
+      type: '周报',
+      priority: '低',
+      dueDate: new Date(Date.UTC(2026, 4, 20)),
+      status: '已完成',
+      notes: '用于验证行政事项归档列表展示已完成周报',
+      recurrenceType: 'weekly',
+      isRecurring: true,
+      isArchived: true,
+      archivedAt: new Date(Date.UTC(2026, 4, 20)),
     })
   }
 
