@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
@@ -11,7 +11,12 @@ interface AdminTask {
   type: string
   priority: string | null
   dueDate: string | null
+  taskDate: string | null
+  startTime: string | null
+  endTime: string | null
   isRecurring: boolean
+  recurrenceType: string
+  recurrenceEndDate: string | null
   status: string
   completedAt: string | null
   notes: string | null
@@ -24,25 +29,68 @@ interface AdminTask {
 interface TaskForm {
   title: string
   type: string
+  taskDate: string
+  startTime: string
+  endTime: string
   priority: string
-  dueDate: string
-  isRecurring: boolean
   status: string
+  recurrenceType: string
+  recurrenceEndDate: string
   notes: string
+}
+
+interface MonthCell {
+  date: Date
+  dateKey: string
+  dayNumber: number
+  isCurrentMonth: boolean
+  isToday: boolean
 }
 
 const PRIORITIES = ['高', '中', '低']
 const STATUSES = ['未开始', '进行中', '已完成', '暂停']
+const RECURRENCE_TYPES = [
+  { value: 'none', label: '不重复' },
+  { value: 'daily', label: '每天' },
+  { value: 'weekly', label: '每周' },
+  { value: 'monthly', label: '每月' },
+  { value: 'yearly', label: '每年' },
+]
 const DEFAULT_TYPES = ['会议', '周报', '办公采购', '接待', '证照资料', '其他']
+const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
 
-const EMPTY_FORM: TaskForm = {
-  title: '',
-  type: '会议',
-  priority: '中',
-  dueDate: '',
-  isRecurring: false,
-  status: '未开始',
-  notes: '',
+function toDateKey(date: Date) {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function startOfMonthGrid(monthDate: Date) {
+  const firstDay = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1)
+  const mondayOffset = (firstDay.getDay() + 6) % 7
+  const gridStart = new Date(firstDay)
+  gridStart.setDate(firstDay.getDate() - mondayOffset)
+  return gridStart
+}
+
+function buildMonthCells(monthDate: Date) {
+  const gridStart = startOfMonthGrid(monthDate)
+  const todayKey = toDateKey(new Date())
+
+  return Array.from({ length: 42 }, (_, index): MonthCell => {
+    const date = new Date(gridStart)
+    date.setDate(gridStart.getDate() + index)
+    const dateKey = toDateKey(date)
+
+    return {
+      date,
+      dateKey,
+      dayNumber: date.getDate(),
+      isCurrentMonth: date.getMonth() === monthDate.getMonth(),
+      isToday: dateKey === todayKey,
+    }
+  })
 }
 
 function toDateInputValue(value: string | null) {
@@ -50,17 +98,28 @@ function toDateInputValue(value: string | null) {
   return value.slice(0, 10)
 }
 
+function taskDateKey(task: AdminTask) {
+  return toDateInputValue(task.taskDate || task.dueDate || task.createdAt)
+}
+
 function formatDate(value: string | null) {
   if (!value) return '-'
   return value.slice(0, 10)
 }
 
-function isTaskOverdue(task: AdminTask) {
-  const today = new Date()
-  const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
-  const dueTime = task.dueDate ? Date.parse(task.dueDate.slice(0, 10)) : Number.NaN
+function formatMonthTitle(date: Date) {
+  return `${date.getFullYear()}年${date.getMonth() + 1}月`
+}
 
-  return Boolean(task.dueDate && dueTime < todayUtc && task.status !== '已完成' && !task.isArchived)
+function formatSelectedTitle(dateKey: string) {
+  const [year, month, day] = dateKey.split('-')
+  return `${year}年${Number(month)}月${Number(day)}日`
+}
+
+function isTaskOverdue(task: AdminTask) {
+  const todayKey = toDateKey(new Date())
+  const dateKey = taskDateKey(task)
+  return Boolean(dateKey && dateKey < todayKey && task.status !== '已完成' && !task.isArchived)
 }
 
 function statusClass(status: string) {
@@ -84,47 +143,110 @@ function priorityClass(priority: string | null) {
   return priority ? classes[priority] || 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-600'
 }
 
+function recurrenceLabel(value: string) {
+  return RECURRENCE_TYPES.find((item) => item.value === value)?.label || '不重复'
+}
+
+async function readApiError(response: Response, fallback: string) {
+  try {
+    const data: unknown = await response.json()
+    if (
+      data &&
+      typeof data === 'object' &&
+      'error' in data &&
+      typeof data.error === 'string' &&
+      data.error.trim()
+    ) {
+      return data.error
+    }
+  } catch {
+    return fallback
+  }
+
+  return fallback
+}
+
+function sortTasksByTime(a: AdminTask, b: AdminTask) {
+  const aTime = a.startTime || '99:99'
+  const bTime = b.startTime || '99:99'
+  if (aTime !== bTime) return aTime.localeCompare(bTime)
+  return a.createdAt.localeCompare(b.createdAt)
+}
+
+function createEmptyForm(taskDate: string): TaskForm {
+  return {
+    title: '',
+    type: '会议',
+    taskDate,
+    startTime: '',
+    endTime: '',
+    priority: '中',
+    status: '未开始',
+    recurrenceType: 'none',
+    recurrenceEndDate: '',
+    notes: '',
+  }
+}
+
 export default function AdminTasksPage() {
+  const todayKey = useMemo(() => toDateKey(new Date()), [])
+  const [selectedDate, setSelectedDate] = useState(todayKey)
+  const [visibleMonth, setVisibleMonth] = useState(() => {
+    const today = new Date()
+    return new Date(today.getFullYear(), today.getMonth(), 1)
+  })
   const [tasks, setTasks] = useState<AdminTask[]>([])
   const [loading, setLoading] = useState(true)
   const [bindingError, setBindingError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState<TaskForm>(EMPTY_FORM)
+  const [form, setForm] = useState<TaskForm>(() => createEmptyForm(todayKey))
   const [saving, setSaving] = useState(false)
   const [archiveTarget, setArchiveTarget] = useState<AdminTask | null>(null)
-  const [filterType, setFilterType] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
-  const [filterPriority, setFilterPriority] = useState('')
-  const [filterOverdue, setFilterOverdue] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
   const { showToast } = useToast()
+
+  const monthCells = useMemo(() => buildMonthCells(visibleMonth), [visibleMonth])
+  const rangeFrom = monthCells[0]?.dateKey || todayKey
+  const rangeTo = monthCells[monthCells.length - 1]?.dateKey || todayKey
 
   const typeOptions = useMemo(() => {
     const existingTypes = tasks.map((task) => task.type).filter(Boolean)
     return [...new Set([...DEFAULT_TYPES, ...existingTypes])].sort()
   }, [tasks])
 
+  const tasksByDate = useMemo(() => {
+    return tasks.reduce<Record<string, AdminTask[]>>((groups, task) => {
+      const dateKey = taskDateKey(task)
+      if (!dateKey) return groups
+      groups[dateKey] = [...(groups[dateKey] || []), task]
+      groups[dateKey].sort(sortTasksByTime)
+      return groups
+    }, {})
+  }, [tasks])
+
+  const selectedTasks = tasksByDate[selectedDate] || []
+  const timedTasks = selectedTasks.filter((task) => task.startTime).sort(sortTasksByTime)
+  const noTimeTasks = selectedTasks.filter((task) => !task.startTime).sort(sortTasksByTime)
+
   useEffect(() => {
+    const controller = new AbortController()
+
     async function load() {
       setLoading(true)
       try {
-        const params = new URLSearchParams()
-        if (filterType) params.set('type', filterType)
-        if (filterStatus) params.set('status', filterStatus)
-        if (filterPriority) params.set('priority', filterPriority)
-        if (filterOverdue) params.set('overdue', filterOverdue)
-
-        const response = await fetch(`/api/admin-tasks?${params.toString()}`)
+        const response = await fetch(`/api/admin-tasks?from=${rangeFrom}&to=${rangeTo}`, {
+          signal: controller.signal,
+        })
         if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.error || '获取行政事项列表失败')
+          throw new Error(await readApiError(response, '获取行政事项失败'))
         }
 
         setBindingError('')
         setTasks(await response.json())
       } catch (error) {
-        const message = error instanceof Error ? error.message : '获取行政事项列表失败'
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        const message = error instanceof Error ? error.message : '获取行政事项失败'
         if (message.includes('未绑定人员')) {
           setBindingError(message)
           setTasks([])
@@ -132,20 +254,34 @@ export default function AdminTasksPage() {
           showToast(message, 'error')
         }
       } finally {
+        if (controller.signal.aborted) return
         setLoading(false)
       }
     }
 
     load()
-  }, [filterType, filterStatus, filterPriority, filterOverdue, reloadKey, showToast])
+
+    return () => controller.abort()
+  }, [rangeFrom, rangeTo, reloadKey, showToast])
 
   function reload() {
     setReloadKey((key) => key + 1)
   }
 
+  function changeMonth(offset: number) {
+    setVisibleMonth((month) => new Date(month.getFullYear(), month.getMonth() + offset, 1))
+  }
+
+  function goToday() {
+    const today = new Date()
+    const dateKey = toDateKey(today)
+    setSelectedDate(dateKey)
+    setVisibleMonth(new Date(today.getFullYear(), today.getMonth(), 1))
+  }
+
   function openCreate() {
     setEditingId(null)
-    setForm(EMPTY_FORM)
+    setForm(createEmptyForm(selectedDate))
     setModalOpen(true)
   }
 
@@ -154,16 +290,19 @@ export default function AdminTasksPage() {
     setForm({
       title: task.title,
       type: task.type,
+      taskDate: toDateInputValue(task.taskDate || task.dueDate),
+      startTime: task.startTime || '',
+      endTime: task.endTime || '',
       priority: task.priority || '中',
-      dueDate: toDateInputValue(task.dueDate),
-      isRecurring: task.isRecurring,
       status: task.status,
+      recurrenceType: task.recurrenceType || 'none',
+      recurrenceEndDate: toDateInputValue(task.recurrenceEndDate),
       notes: task.notes || '',
     })
     setModalOpen(true)
   }
 
-  async function submitTask(event: React.FormEvent) {
+  async function submitTask(event: FormEvent) {
     event.preventDefault()
     setSaving(true)
 
@@ -171,12 +310,17 @@ export default function AdminTasksPage() {
       const response = await fetch(editingId ? `/api/admin-tasks/${editingId}` : '/api/admin-tasks', {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          dueDate: form.taskDate,
+          startTime: form.startTime || null,
+          endTime: form.endTime || null,
+          recurrenceEndDate: form.recurrenceEndDate || null,
+        }),
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || '保存行政事项失败')
+        throw new Error(await readApiError(response, '保存行政事项失败'))
       }
 
       showToast(editingId ? '行政事项已更新' : '行政事项已新增', 'success')
@@ -198,8 +342,7 @@ export default function AdminTasksPage() {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || '更新状态失败')
+        throw new Error(await readApiError(response, '更新状态失败'))
       }
 
       showToast('状态已更新', 'success')
@@ -215,8 +358,7 @@ export default function AdminTasksPage() {
     try {
       const response = await fetch(`/api/admin-tasks/${archiveTarget.id}`, { method: 'DELETE' })
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || '归档行政事项失败')
+        throw new Error(await readApiError(response, '归档行政事项失败'))
       }
 
       showToast('行政事项已归档', 'success')
@@ -226,167 +368,237 @@ export default function AdminTasksPage() {
     }
   }
 
-  function resetFilters() {
-    setFilterType('')
-    setFilterStatus('')
-    setFilterPriority('')
-    setFilterOverdue('')
+  function renderTaskCard(task: AdminTask, compact = false) {
+    return (
+      <div key={task.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              {task.startTime ? (
+                <span className="shrink-0 text-xs font-semibold text-slate-500">
+                  {task.startTime}{task.endTime ? `-${task.endTime}` : ''}
+                </span>
+              ) : null}
+              <span className="break-words text-sm font-semibold text-slate-900">{task.title}</span>
+            </div>
+            {!compact && task.notes ? (
+              <p className="mt-2 line-clamp-2 break-words text-xs leading-5 text-slate-500">{task.notes}</p>
+            ) : null}
+          </div>
+          <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusClass(task.status)}`}>
+            {task.status}
+          </span>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <span className={`rounded-full px-2 py-0.5 font-medium ${priorityClass(task.priority)}`}>
+            {task.priority || '未设优先级'}
+          </span>
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">{task.type}</span>
+          {task.recurrenceType !== 'none' ? (
+            <span className="rounded-full bg-violet-50 px-2 py-0.5 text-violet-700">
+              {recurrenceLabel(task.recurrenceType)}
+              {task.recurrenceEndDate ? ` 至 ${formatDate(task.recurrenceEndDate)}` : ''}
+            </span>
+          ) : null}
+          {isTaskOverdue(task) ? (
+            <span className="rounded-full bg-red-50 px-2 py-0.5 font-medium text-red-700">已超期</span>
+          ) : null}
+        </div>
+
+        {!compact ? (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+            <select
+              value={task.status}
+              onChange={(event) => updateStatus(task, event.target.value)}
+              className="h-9 min-w-[116px] rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              {STATUSES.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => openEdit(task)}
+                className="text-[13px] font-semibold text-blue-600 hover:text-blue-800"
+              >
+                编辑
+              </button>
+              <button
+                type="button"
+                onClick={() => setArchiveTarget(task)}
+                className="text-[13px] font-semibold text-red-600 hover:text-red-700"
+              >
+                归档
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    )
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="min-h-full bg-slate-50 p-4 text-slate-900 md:p-6">
+      <div className="mb-5 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <h1 className="text-[22px] font-bold text-[#0f172a]">我的行政事项</h1>
-          <p className="text-[13px] text-slate-400 mt-0.5">仅展示当前登录账号绑定人员名下的个人行政事项。</p>
+          <h1 className="text-[22px] font-bold text-slate-950">我的行政事项</h1>
+          <p className="mt-1 max-w-3xl text-[13px] leading-5 text-slate-500">
+            按日期安排个人行政事项，左侧查看整月分布，右侧处理选中日期的待办。
+          </p>
         </div>
         <button
           type="button"
           onClick={openCreate}
-          className="inline-flex items-center justify-center h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm"
+          className="h-10 w-full rounded-lg bg-blue-600 px-5 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 md:w-auto"
         >
-          + 新增行政事项
+          新增行政事项
         </button>
       </div>
 
-      <div className="mb-4 grid gap-3 rounded-[20px] border border-[#e5eaf3] bg-white p-4 md:grid-cols-5" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
-        <select
-          value={filterType}
-          onChange={(event) => setFilterType(event.target.value)}
-          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-        >
-          <option value="">全部类型</option>
-          {typeOptions.map((type) => (
-            <option key={type} value={type}>{type}</option>
-          ))}
-        </select>
-        <select
-          value={filterStatus}
-          onChange={(event) => setFilterStatus(event.target.value)}
-          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-        >
-          <option value="">全部状态</option>
-          {STATUSES.map((status) => (
-            <option key={status} value={status}>{status}</option>
-          ))}
-        </select>
-        <select
-          value={filterPriority}
-          onChange={(event) => setFilterPriority(event.target.value)}
-          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-        >
-          <option value="">全部优先级</option>
-          {PRIORITIES.map((priority) => (
-            <option key={priority} value={priority}>{priority}</option>
-          ))}
-        </select>
-        <select
-          value={filterOverdue}
-          onChange={(event) => setFilterOverdue(event.target.value)}
-          className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-        >
-          <option value="">全部期限</option>
-          <option value="true">仅看超期</option>
-          <option value="false">仅看未超期</option>
-        </select>
-        <button
-          type="button"
-          onClick={resetFilters}
-          className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium"
-        >
-          清空筛选
-        </button>
-      </div>
-
-      {bindingError && (
-        <div className="mb-4 rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-700">
+      {bindingError ? (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-700">
           {bindingError}
         </div>
-      )}
+      ) : null}
 
-      <div className="overflow-hidden rounded-[20px] border border-[#e5eaf3] bg-white" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
-        {loading ? (
-          <div className="py-16 text-center text-sm text-gray-400">正在加载行政事项...</div>
-        ) : tasks.length === 0 ? (
-          <div className="py-16 text-center text-sm text-gray-400">暂无符合条件的行政事项</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-sm">
-              <thead>
-                <tr className="bg-[#f8fafc] border-b border-[#e5eaf3] text-left">
-                  <th className="px-5 h-[52px] text-[13px] font-bold text-[#475569]">事项名称</th>
-                  <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">类型</th>
-                  <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">优先级</th>
-                  <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">截止日期</th>
-                  <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">状态</th>
-                  <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">完成时间</th>
-                  <th className="px-4 h-[52px] text-[13px] font-bold text-[#475569]">快速状态</th>
-                  <th className="px-5 h-[52px] text-[13px] font-bold text-[#475569] text-right">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tasks.map((task) => (
-                  <tr key={task.id} className="border-b border-[#f1f5f9] last:border-b-0 hover:bg-[#f8fafc]">
-                    <td className="px-5 h-[58px]">
-                      <div className="text-[14px] font-bold text-[#0f172a]">{task.title}</div>
-                      {task.notes ? <div className="mt-1 max-w-xs truncate text-xs text-gray-500">{task.notes}</div> : null}
-                    </td>
-                    <td className="px-4 h-[58px] text-gray-700">{task.type}</td>
-                    <td className="px-4 h-[58px]">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${priorityClass(task.priority)}`}>
-                        {task.priority || '-'}
-                      </span>
-                    </td>
-                    <td className="px-4 h-[58px]">
-                      <div className="text-gray-700">{formatDate(task.dueDate)}</div>
-                      {isTaskOverdue(task) ? <div className="mt-1 text-xs font-medium text-red-600">已超期</div> : null}
-                    </td>
-                    <td className="px-4 h-[58px]">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusClass(task.status)}`}>
-                        {task.status}
-                      </span>
-                    </td>
-                    <td className="px-4 h-[58px] text-gray-600">{formatDate(task.completedAt)}</td>
-                    <td className="px-4 h-[58px]">
-                      <select
-                        value={task.status}
-                        onChange={(event) => updateStatus(task, event.target.value)}
-                        className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                      >
-                        {STATUSES.map((status) => (
-                          <option key={status} value={status}>{status}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-5 h-[58px] text-right">
-                      <button
-                        type="button"
-                        onClick={() => openEdit(task)}
-                        className="text-[13px] font-semibold text-[#2563eb] hover:text-blue-800 mr-4"
-                      >
-                        编辑
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setArchiveTarget(task)}
-                        className="text-[13px] font-semibold text-[#ef4444] hover:text-red-700"
-                      >
-                        归档
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <section className="min-w-0 rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-slate-200 p-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={() => changeMonth(-1)}
+                className="h-9 min-w-[36px] rounded-lg border border-slate-200 text-lg leading-none text-slate-700 hover:bg-slate-50"
+                aria-label="上个月"
+              >
+                ‹
+              </button>
+              <div className="min-w-[132px] text-center text-lg font-bold text-slate-950">{formatMonthTitle(visibleMonth)}</div>
+              <button
+                type="button"
+                onClick={() => changeMonth(1)}
+                className="h-9 min-w-[36px] rounded-lg border border-slate-200 text-lg leading-none text-slate-700 hover:bg-slate-50"
+                aria-label="下个月"
+              >
+                ›
+              </button>
+              <button
+                type="button"
+                onClick={goToday}
+                className="h-9 rounded-lg border border-slate-200 px-3 text-[13px] font-medium text-slate-700 hover:bg-slate-50"
+              >
+                今天
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+              <span className="rounded-full bg-slate-100 px-2.5 py-1">范围 {rangeFrom} 至 {rangeTo}</span>
+              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700">{tasks.length} 项</span>
+            </div>
           </div>
-        )}
+
+          <div className="overflow-x-auto">
+            <div className="min-w-[840px]">
+              <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
+                {WEEKDAYS.map((weekday) => (
+                  <div key={weekday} className="h-9 px-2 text-center text-xs font-semibold leading-9 text-slate-500">
+                    周{weekday}
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7">
+                {monthCells.map((cell) => {
+                  const cellTasks = tasksByDate[cell.dateKey] || []
+                  const isSelected = selectedDate === cell.dateKey
+
+                  return (
+                    <button
+                      key={cell.dateKey}
+                      type="button"
+                      onClick={() => setSelectedDate(cell.dateKey)}
+                      className={`min-h-[116px] min-w-0 border-b border-r border-slate-100 p-2 text-left transition-colors hover:bg-blue-50/60 ${
+                        isSelected ? 'bg-blue-50 ring-2 ring-inset ring-blue-500' : 'bg-white'
+                      } ${cell.isCurrentMonth ? '' : 'text-slate-400'} ${(cell.date.getDay() === 0 || cell.date.getDay() === 6) ? 'bg-slate-50/70' : ''}`}
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-1">
+                        <span className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold ${
+                          cell.isToday ? 'bg-blue-600 text-white' : cell.isCurrentMonth ? 'text-slate-800' : 'text-slate-400'
+                        }`}>
+                          {cell.dayNumber}
+                        </span>
+                        {cellTasks.length > 0 ? (
+                          <span className="shrink-0 rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-semibold text-white">
+                            {cellTasks.length}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="space-y-1">
+                        {cellTasks.slice(0, 3).map((task) => (
+                          <div
+                            key={task.id}
+                            className={`truncate rounded px-2 py-1 text-[11px] font-medium ${
+                              task.status === '已完成' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700'
+                            }`}
+                            title={task.title}
+                          >
+                            {task.startTime ? `${task.startTime} ` : ''}{task.title}
+                          </div>
+                        ))}
+                        {cellTasks.length > 3 ? (
+                          <div className="px-2 text-[11px] font-medium text-slate-400">还有 {cellTasks.length - 3} 项</div>
+                        ) : null}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside className="min-w-0 rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 p-4">
+            <div className="text-sm font-semibold text-slate-500">选中日期</div>
+            <div className="mt-1 break-words text-xl font-bold text-slate-950">{formatSelectedTitle(selectedDate)}</div>
+            <div className="mt-2 text-[13px] text-slate-500">
+              {selectedTasks.length > 0 ? `${selectedTasks.length} 项行政事项` : '暂无行政事项'}
+            </div>
+          </div>
+
+          <div className="max-h-[720px] overflow-y-auto p-4">
+            {loading ? (
+              <div className="py-16 text-center text-sm text-slate-400">正在加载行政事项...</div>
+            ) : selectedTasks.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-sm text-slate-400">
+                这一天还没有安排事项
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {timedTasks.length > 0 ? (
+                  <section>
+                    <h2 className="mb-3 text-sm font-bold text-slate-800">有时间安排</h2>
+                    <div className="space-y-3">{timedTasks.map((task) => renderTaskCard(task))}</div>
+                  </section>
+                ) : null}
+                {noTimeTasks.length > 0 ? (
+                  <section>
+                    <h2 className="mb-3 text-sm font-bold text-slate-800">无具体时间</h2>
+                    <div className="space-y-3">{noTimeTasks.map((task) => renderTaskCard(task))}</div>
+                  </section>
+                ) : null}
+              </div>
+            )}
+          </div>
+        </aside>
       </div>
 
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editingId ? '编辑行政事项' : '新增行政事项'}
-        width="max-w-2xl"
+        width="max-w-3xl"
       >
         <form onSubmit={submitTask} className="space-y-4">
           <div>
@@ -395,7 +607,7 @@ export default function AdminTasksPage() {
               type="text"
               value={form.title}
               onChange={(event) => setForm({ ...form, title: event.target.value })}
-              className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               required
             />
           </div>
@@ -408,7 +620,7 @@ export default function AdminTasksPage() {
                 list="admin-task-types"
                 value={form.type}
                 onChange={(event) => setForm({ ...form, type: event.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 required
               />
               <datalist id="admin-task-types">
@@ -418,12 +630,34 @@ export default function AdminTasksPage() {
               </datalist>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">截止日期</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">事项日期 <span className="text-red-500">*</span></label>
               <input
                 type="date"
-                value={form.dueDate}
-                onChange={(event) => setForm({ ...form, dueDate: event.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                value={form.taskDate}
+                onChange={(event) => setForm({ ...form, taskDate: event.target.value })}
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">开始时间</label>
+              <input
+                type="time"
+                value={form.startTime}
+                onChange={(event) => setForm({ ...form, startTime: event.target.value })}
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">结束时间</label>
+              <input
+                type="time"
+                value={form.endTime}
+                onChange={(event) => setForm({ ...form, endTime: event.target.value })}
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
             </div>
           </div>
@@ -434,7 +668,7 @@ export default function AdminTasksPage() {
               <select
                 value={form.priority}
                 onChange={(event) => setForm({ ...form, priority: event.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 {PRIORITIES.map((priority) => (
                   <option key={priority} value={priority}>{priority}</option>
@@ -446,22 +680,35 @@ export default function AdminTasksPage() {
               <select
                 value={form.status}
                 onChange={(event) => setForm({ ...form, status: event.target.value })}
-                className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
                 {STATUSES.map((status) => (
                   <option key={status} value={status}>{status}</option>
                 ))}
               </select>
             </div>
-            <label className="mt-7 flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={form.isRecurring}
-                onChange={(event) => setForm({ ...form, isRecurring: event.target.checked })}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              重复事项
-            </label>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">重复规则</label>
+              <select
+                value={form.recurrenceType}
+                onChange={(event) => setForm({ ...form, recurrenceType: event.target.value })}
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                {RECURRENCE_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>{type.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">重复结束日期</label>
+            <input
+              type="date"
+              value={form.recurrenceEndDate}
+              onChange={(event) => setForm({ ...form, recurrenceEndDate: event.target.value })}
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            />
           </div>
 
           <div>
@@ -470,7 +717,7 @@ export default function AdminTasksPage() {
               value={form.notes}
               onChange={(event) => setForm({ ...form, notes: event.target.value })}
               rows={4}
-              className="w-full h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="min-h-[104px] w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 text-[13px] leading-5 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
 
@@ -478,14 +725,14 @@ export default function AdminTasksPage() {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="h-10 px-5 text-[13px] text-[#475569] bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors font-medium"
+              className="h-10 rounded-lg bg-slate-100 px-5 text-[13px] font-medium text-slate-600 transition-colors hover:bg-slate-200"
             >
               取消
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-10 rounded-lg bg-blue-600 px-5 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving ? '保存中...' : '保存'}
             </button>
@@ -498,7 +745,7 @@ export default function AdminTasksPage() {
         onClose={() => setArchiveTarget(null)}
         onConfirm={archiveTask}
         title="确认归档行政事项"
-        message={`确定要归档“${archiveTarget?.title || ''}”吗？归档后默认列表不再显示。`}
+        message={`确定要归档“${archiveTarget?.title || ''}”吗？归档后默认不再显示。`}
         confirmText="确认归档"
         cancelText="取消"
       />
