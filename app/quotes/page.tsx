@@ -6,6 +6,19 @@ import { useToast } from '@/components/ui/Toast'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import Modal from '@/components/ui/Modal'
 import { buildCSVContent, buildErrorReportRows } from '@/lib/csv-utils'
+import {
+  DataSurface,
+  FilterPanel,
+  KpiStrip,
+  PageHeader,
+  StatusBadge,
+  workspaceControlClass,
+  workspacePrimaryButtonClass,
+  workspaceSecondaryButtonClass,
+} from '@/components/ui/WorkspaceShell'
+import { Download, FileUp, Plus, Search } from 'lucide-react'
+import { normalizeListResponse } from '@/lib/list-response'
+import WorkspaceMotion from '@/components/ui/WorkspaceMotion'
 
 interface QuoteSheet {
   id: string
@@ -72,8 +85,14 @@ export default function QuotesPage() {
         if (filterStage) params.set('quoteStage', filterStage)
 
         const res = await fetch(`/api/quotes?${params}`)
+        if (res.status === 401 && !cancelled) {
+          router.push('/login')
+          return
+        }
         if (res.ok && !cancelled) {
-          setQuotes(await res.json())
+          setQuotes(normalizeListResponse<QuoteSheet>(await res.json()))
+        } else if (!res.ok) {
+          throw new Error()
         }
       } catch {
         if (!cancelled) showToast('获取报价单列表失败', 'error')
@@ -87,8 +106,8 @@ export default function QuotesPage() {
   }, [search, filterCategory, filterSupplier, filterStage, reloadKey])
 
   useEffect(() => {
-    fetch('/api/categories').then(r => r.json()).then(setCategories).catch(() => {})
-    fetch('/api/suppliers').then(r => r.json()).then((data: SupplierOption[]) => setSuppliers(data)).catch(() => {})
+    fetch('/api/categories').then(r => r.json()).then((data) => setCategories(normalizeListResponse<CategoryOption>(data))).catch(() => {})
+    fetch('/api/suppliers').then(r => r.json()).then((data) => setSuppliers(normalizeListResponse<SupplierOption>(data))).catch(() => {})
   }, [])
 
   // 搜索防抖
@@ -212,52 +231,77 @@ export default function QuotesPage() {
     }
   }
 
-  const ic = 'w-full h-10 border border-[#e5eaf3] rounded-xl px-3 text-[14px] text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400'
-  const sc = 'h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20'
+  const activeFilterCount = [search, filterCategory, filterSupplier, filterStage].filter(Boolean).length
+  const quoteItemCount = quotes.reduce((sum, quote) => sum + quote.items.length, 0)
+  const finalQuoteCount = quotes.filter((quote) => quote.quoteStage === '最终确认价').length
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[22px] font-bold text-[#0f172a]">报价管理</h1>
-          <p className="text-[13px] text-slate-400 mt-0.5">管理所有供应商报价单和报价明细</p>
-        </div>
-        <div className="flex gap-2">
+    <WorkspaceMotion>
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow="报价资产"
+        title="报价管理"
+        description="集中维护供应商报价单、报价阶段和导入校验结果，支撑后续横向对比。"
+        meta={
+          <>
+            <StatusBadge tone="primary">报价单 {quotes.length}</StatusBadge>
+            <StatusBadge tone="success">明细 {quoteItemCount}</StatusBadge>
+          </>
+        }
+        actions={
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setImportModalOpen(true)}
-            className="h-9 px-3 border border-[#e5eaf3] bg-white text-[13px] text-[#475569] rounded-xl hover:bg-slate-50 transition-colors font-medium"
+            className={workspaceSecondaryButtonClass}
           >
-            📥 CSV 导入
+            <FileUp className="h-4 w-4" />
+            CSV 导入
           </button>
           <button
             onClick={handleExport}
-            className="h-9 px-3 border border-[#e5eaf3] bg-white text-[13px] text-[#475569] rounded-xl hover:bg-slate-50 transition-colors font-medium"
+            className={workspaceSecondaryButtonClass}
           >
-            📤 CSV 导出
+            <Download className="h-4 w-4" />
+            CSV 导出
           </button>
           <button
             onClick={() => router.push('/quotes/new')}
-            className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm"
+            className={workspacePrimaryButtonClass}
           >
-            + 新增报价单
+            <Plus className="h-4 w-4" />
+            新增报价单
           </button>
         </div>
-      </div>
+        }
+      />
+
+      <KpiStrip
+        columns={4}
+        items={[
+          { label: '报价单', value: quotes.length, hint: '当前列表', tone: 'primary' },
+          { label: '报价明细', value: quoteItemCount, hint: '可参与对比', tone: 'success' },
+          { label: '最终确认价', value: finalQuoteCount, hint: '已进入确认阶段', tone: 'warning' },
+          { label: '筛选条件', value: activeFilterCount, hint: '当前启用数量', tone: activeFilterCount ? 'warning' : 'neutral' },
+        ]}
+      />
 
       {/* 筛选栏 */}
-      <div className="rounded-2xl bg-white border border-[#e5eaf3] p-4 mb-6" style={{ boxShadow: '0 6px 18px rgba(15, 23, 42, 0.04)' }}>
+      <FilterPanel summary={`当前启用 ${activeFilterCount} 个筛选条件`} actions={<span className="text-[12px] font-semibold text-slate-400">导入失败会生成可下载错误报告</span>}>
         <div className="flex gap-3 flex-wrap items-center">
+          <div className="relative w-80 max-w-full">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
             placeholder="搜索报价单编号、名称或供应商..."
-            className={`${ic} max-w-xs`}
+            className={`${workspaceControlClass} w-full pl-9`}
           />
+          </div>
           <select
             value={filterCategory}
             onChange={e => setFilterCategory(e.target.value)}
-            className={sc}
+            className={workspaceControlClass}
           >
             <option value="">全部品类</option>
             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -265,7 +309,7 @@ export default function QuotesPage() {
           <select
             value={filterSupplier}
             onChange={e => setFilterSupplier(e.target.value)}
-            className={sc}
+            className={workspaceControlClass}
           >
             <option value="">全部供应商</option>
             {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -273,7 +317,7 @@ export default function QuotesPage() {
           <select
             value={filterStage}
             onChange={e => setFilterStage(e.target.value)}
-            className={sc}
+            className={workspaceControlClass}
           >
             <option value="">全部阶段</option>
             {QUOTE_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -281,16 +325,16 @@ export default function QuotesPage() {
           {(search || filterCategory || filterSupplier || filterStage) && (
             <button
               onClick={() => { setSearchInput(''); setFilterCategory(''); setFilterSupplier(''); setFilterStage('') }}
-              className="text-xs text-gray-500 hover:text-gray-700"
+              className="text-xs font-bold text-slate-500 hover:text-slate-700"
             >
               清除筛选
             </button>
           )}
         </div>
-      </div>
+      </FilterPanel>
 
       {/* 列表 */}
-      <div className="rounded-[20px] bg-white border border-[#e5eaf3] overflow-hidden" style={{ boxShadow: '0 10px 28px rgba(15, 23, 42, 0.05)' }}>
+      <DataSurface>
         {loading ? (
           <div className="text-center py-12 text-gray-400">加载中...</div>
         ) : quotes.length === 0 ? (
@@ -305,22 +349,23 @@ export default function QuotesPage() {
             </button>
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[980px] text-sm">
             <thead>
-              <tr className="bg-[#f8fafc] border-b border-[#e5eaf3]">
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">编号</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">名称</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">供应商</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">品类</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">报价日期</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600">阶段</th>
-                <th className="text-center px-4 py-3 font-semibold text-gray-600">明细数</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-600">操作</th>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="text-left px-4 py-3 text-[12px] font-extrabold text-slate-500">编号</th>
+                <th className="text-left px-4 py-3 text-[12px] font-extrabold text-slate-500">名称</th>
+                <th className="text-left px-4 py-3 text-[12px] font-extrabold text-slate-500">供应商</th>
+                <th className="text-left px-4 py-3 text-[12px] font-extrabold text-slate-500">品类</th>
+                <th className="text-left px-4 py-3 text-[12px] font-extrabold text-slate-500">报价日期</th>
+                <th className="text-left px-4 py-3 text-[12px] font-extrabold text-slate-500">阶段</th>
+                <th className="text-center px-4 py-3 text-[12px] font-extrabold text-slate-500">明细数</th>
+                <th className="text-right px-4 py-3 text-[12px] font-extrabold text-slate-500">操作</th>
               </tr>
             </thead>
             <tbody>
               {quotes.map(q => (
-                <tr key={q.id} className="border-b border-gray-50 hover:bg-blue-50/30 transition-colors cursor-pointer"
+                <tr key={q.id} className="border-b border-slate-100 hover:bg-blue-50/30 transition-colors cursor-pointer"
                   onClick={() => router.push(`/quotes/${q.id}`)}
                 >
                   <td className="px-4 py-3 text-gray-500 font-mono text-xs">{q.quoteNumber || '-'}</td>
@@ -360,8 +405,9 @@ export default function QuotesPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
-      </div>
+      </DataSurface>
 
       {/* 归档确认 */}
       <ConfirmDialog
@@ -460,5 +506,6 @@ export default function QuotesPage() {
         </div>
       </Modal>
     </div>
+    </WorkspaceMotion>
   )
 }

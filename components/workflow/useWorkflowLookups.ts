@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { normalizeListResponse } from '@/lib/list-response';
 
 export interface LookupOption {
   id: string;
@@ -20,9 +21,9 @@ export function useWorkflowLookups() {
           fetch('/api/people'),
         ]);
 
-        if (catRes.ok) setCategories(await catRes.json());
-        if (supRes.ok) setSuppliers(await supRes.json());
-        if (peoRes.ok) setPeople(await peoRes.json());
+        if (catRes.ok) setCategories(normalizeListResponse<LookupOption>(await catRes.json()));
+        if (supRes.ok) setSuppliers(normalizeListResponse<LookupOption>(await supRes.json()));
+        if (peoRes.ok) setPeople(normalizeListResponse<LookupOption>(await peoRes.json()));
       } catch (error) {
         console.error('Failed to load lookups', error);
       } finally {

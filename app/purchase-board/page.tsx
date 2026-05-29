@@ -11,6 +11,17 @@ import { PURCHASE_STAGES, PURCHASE_STATUSES, PRIORITIES } from '@/lib/workflow-c
 import PurchaseProcessForm from '@/components/workflow/PurchaseProcessForm'
 import { useWorkflowLookups } from '@/components/workflow/useWorkflowLookups'
 import { buildCSVContent, buildErrorReportRows } from '@/lib/csv-utils'
+import {
+  FilterPanel,
+  KpiStrip,
+  PageHeader,
+  StatusBadge,
+  workspaceControlClass,
+  workspacePrimaryButtonClass,
+  workspaceSecondaryButtonClass,
+} from '@/components/ui/WorkspaceShell'
+import { FileUp, Plus } from 'lucide-react'
+import WorkspaceMotion from '@/components/ui/WorkspaceMotion'
 
 interface ProcessItem {
   id: string;
@@ -48,7 +59,7 @@ function PurchaseBoardContent() {
   const [items, setItems] = useState<ProcessItem[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
-  const [collapsedStages, setCollapsedStages] = useState<Set<string>>(new Set(PURCHASE_STAGES))
+  const [collapsedStages, setCollapsedStages] = useState<Set<string>>(new Set())
 
   const toggleCard = (id: string) => {
     setExpandedCards(prev => {
@@ -114,6 +125,10 @@ function PurchaseBoardContent() {
       if (filterPriority) params.append('priority', filterPriority)
 
       const res = await fetch(`/api/purchase-processes?${params.toString()}`)
+      if (res.status === 401) {
+        router.push('/login')
+        return
+      }
       if (!res.ok) throw new Error('Failed to load')
       setItems(await res.json())
     } catch {
@@ -121,7 +136,7 @@ function PurchaseBoardContent() {
     } finally {
       setLoading(false)
     }
-  }, [filterOwnerId, filterRequesterId, filterSalesPersonId, filterStatus, filterPriority, showToast])
+  }, [filterOwnerId, filterRequesterId, filterSalesPersonId, filterStatus, filterPriority, router, showToast])
 
   useEffect(() => {
     loadItems()
@@ -245,65 +260,93 @@ function PurchaseBoardContent() {
     acc[stage] = items.filter(item => item.currentStage === stage)
     return acc
   }, {} as Record<string, ProcessItem[]>)
+  const activeFilterCount = [filterOwnerId, filterRequesterId, filterSalesPersonId, filterStatus, filterPriority].filter(Boolean).length
+  const bossDecisionCount = items.filter(item => item.needBossDecision).length
+  const issueCount = items.filter(item => item.status === '异常' || item.status === '暂停').length
+  const amountTotal = items.reduce((sum, item) => sum + (item.purchaseAmount ?? 0), 0)
 
   return (
+    <WorkspaceMotion>
     <div className="h-full flex flex-col">
-      <div className="flex items-center gap-4 mb-6 shrink-0">
-        <div>
-          <h1 className="text-[22px] font-bold text-[#0f172a]">采购执行看板</h1>
-          <p className="text-[13px] text-slate-400 mt-0.5">跟踪日常采购事项进度</p>
-        </div>
+      <PageHeader
+        eyebrow="执行看板"
+        title="采购执行看板"
+        description="按采购阶段横向推进事项，聚焦负责人、优先级、异常和老板决策阻塞项。"
+        meta={
+          <>
+            <StatusBadge tone="primary">事项 {items.length}</StatusBadge>
+            <StatusBadge tone={bossDecisionCount ? 'warning' : 'success'}>需决策 {bossDecisionCount}</StatusBadge>
+          </>
+        }
+        actions={
+        <div className="flex flex-wrap gap-2">
         <button
           onClick={() => { setEditingItem(null); setFormOpen(true); }}
-          className="h-9 px-5 bg-[#2563eb] text-white rounded-xl hover:bg-blue-700 transition-colors text-[13px] font-semibold shadow-sm"
+          className={workspacePrimaryButtonClass}
         >
-          + 新增采购事项
+          <Plus className="h-4 w-4" />
+          新增采购事项
         </button>
         <button
           onClick={() => setImportModalOpen(true)}
-          className="h-9 px-5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors text-[13px] font-semibold"
+          className={workspaceSecondaryButtonClass}
         >
+          <FileUp className="h-4 w-4" />
           导入审批 CSV
         </button>
       </div>
+        }
+      />
 
-      <div className="rounded-2xl bg-white border border-[#e5eaf3] p-4 mb-6 shrink-0 flex flex-wrap gap-4" style={{ boxShadow: '0 6px 18px rgba(15, 23, 42, 0.04)' }}>
+      <KpiStrip
+        columns={4}
+        items={[
+          { label: '采购事项', value: items.length, hint: '当前筛选结果', tone: 'primary' },
+          { label: '需老板决策', value: bossDecisionCount, hint: '待拍板', tone: bossDecisionCount ? 'warning' : 'success' },
+          { label: '异常/暂停', value: issueCount, hint: '需处理阻塞', tone: issueCount ? 'danger' : 'neutral' },
+          { label: '采购金额', value: `¥${amountTotal.toLocaleString()}`, hint: '当前列表合计', tone: 'slate' },
+        ]}
+      />
+
+      <FilterPanel className="shrink-0" summary={`当前启用 ${activeFilterCount} 个筛选条件`}>
+      <div className="flex flex-wrap gap-4">
         <div>
           <label className="block text-[12px] text-slate-400 font-medium mb-1.5">负责人</label>
-          <select className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20" value={filterOwnerId} onChange={e => setFilterOwnerId(e.target.value)}>
+          <select className={workspaceControlClass} value={filterOwnerId} onChange={e => setFilterOwnerId(e.target.value)}>
             <option value="">全部</option>
             {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
         <div>
           <label className="block text-[12px] text-slate-400 font-medium mb-1.5">需求提交人</label>
-          <select className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20" value={filterRequesterId} onChange={e => setFilterRequesterId(e.target.value)}>
+          <select className={workspaceControlClass} value={filterRequesterId} onChange={e => setFilterRequesterId(e.target.value)}>
             <option value="">全部</option>
             {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
         <div>
           <label className="block text-[12px] text-slate-400 font-medium mb-1.5">销售配合</label>
-          <select className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20" value={filterSalesPersonId} onChange={e => setFilterSalesPersonId(e.target.value)}>
+          <select className={workspaceControlClass} value={filterSalesPersonId} onChange={e => setFilterSalesPersonId(e.target.value)}>
             <option value="">全部</option>
             {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
         <div>
           <label className="block text-[12px] text-slate-400 font-medium mb-1.5">状态</label>
-          <select className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+          <select className={workspaceControlClass} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
             <option value="">全部</option>
             {PURCHASE_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
         <div>
           <label className="block text-[12px] text-slate-400 font-medium mb-1.5">优先级</label>
-          <select className="h-9 px-3 rounded-xl border border-[#e5eaf3] bg-white text-[13px] text-[#334155] focus:outline-none focus:ring-2 focus:ring-blue-500/20" value={filterPriority} onChange={e => setFilterPriority(e.target.value)}>
+          <select className={workspaceControlClass} value={filterPriority} onChange={e => setFilterPriority(e.target.value)}>
             <option value="">全部</option>
             {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
       </div>
+      </FilterPanel>
 
       {/* Kanban Board */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4">
@@ -312,23 +355,28 @@ function PurchaseBoardContent() {
             const isStageCollapsed = collapsedStages.has(stage)
             if (isStageCollapsed) {
               return (
-                <div
+                <button
+                  type="button"
                   key={stage}
-                  className="bg-gray-100/50 rounded-lg border border-gray-200 shrink-0 cursor-pointer hover:bg-gray-200/60 transition-colors flex flex-col items-center py-4 px-2 h-full max-h-full justify-center gap-2"
+                  className="flex h-full max-h-full shrink-0 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-gray-200 bg-gray-100/50 px-2 py-4 text-left transition-colors hover:bg-gray-200/60"
                   onClick={() => toggleStage(stage)}
                   title={`展开「${stage}」`}
                 >
                   <span className="text-sm font-semibold text-gray-600" style={{ writingMode: 'vertical-rl', letterSpacing: '0.1em' }}>{stage}</span>
                   <span className="bg-white text-gray-600 text-xs px-2 py-0.5 rounded-full shadow-sm">{groupedItems[stage]?.length || 0}</span>
-                </div>
+                </button>
               )
             }
             return (
             <div key={stage} className="w-72 bg-gray-100/50 rounded-xl flex flex-col h-full max-h-full border border-gray-200 shrink-0">
-              <div className="p-2.5 border-b border-gray-200 bg-gray-100 rounded-t-xl flex justify-between items-center shrink-0 cursor-pointer hover:bg-gray-200/60 transition-colors" onClick={() => toggleStage(stage)}>
+              <button
+                type="button"
+                className="flex w-full shrink-0 cursor-pointer items-center justify-between rounded-t-xl border-b border-gray-200 bg-gray-100 p-2.5 text-left transition-colors hover:bg-gray-200/60"
+                onClick={() => toggleStage(stage)}
+              >
                 <h3 className="font-semibold text-gray-700 text-sm">{stage}</h3>
                 <span className="bg-white text-gray-600 text-xs px-2 py-0.5 rounded-full shadow-sm">{groupedItems[stage]?.length || 0}</span>
-              </div>
+              </button>
 
               <div className="p-2.5 overflow-y-auto flex-1 space-y-2">
                 {loading ? <div className="text-center text-sm text-gray-400 py-4">加载中...</div> :                  groupedItems[stage]?.map(item => {
@@ -426,7 +474,7 @@ function PurchaseBoardContent() {
 
       {/* Import CSV Modal */}
       <Modal open={importModalOpen} onClose={() => { setImportModalOpen(false); setImportFile(null); setImportErrors([]); setImportResult('') }} title="导入审批 CSV">
-        <div className="space-y-4 w-[480px]">
+        <div className="w-full max-w-[480px] space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">选择 CSV 文件</label>
             <input
@@ -580,6 +628,7 @@ function PurchaseBoardContent() {
         </div>
       </Modal>
     </div>
+    </WorkspaceMotion>
   )
 }
 
