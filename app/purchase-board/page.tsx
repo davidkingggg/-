@@ -33,13 +33,27 @@ interface ProcessItem {
   currentProblem: string | null;
   nextAction: string | null;
   needBossDecision: boolean;
-  purchaseAmount: number | null;
+  purchaseAmount: number | string | null;
   companyName?: string | null;
   supplier: { id: string; name: string };
   category: { id: string; name: string };
   owner: { id: string; name: string };
   requester?: { id: string; name: string };
   salesPerson?: { id: string; name: string };
+}
+
+function toAmount(value: ProcessItem['purchaseAmount']) {
+  if (value === null || value === '') return 0
+  const amount = Number(value)
+  return Number.isFinite(amount) ? amount : 0
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('zh-CN', {
+    style: 'currency',
+    currency: 'CNY',
+    maximumFractionDigits: 2,
+  }).format(value)
 }
 
 interface ImportErrorItem {
@@ -263,7 +277,7 @@ function PurchaseBoardContent() {
   const activeFilterCount = [filterOwnerId, filterRequesterId, filterSalesPersonId, filterStatus, filterPriority].filter(Boolean).length
   const bossDecisionCount = items.filter(item => item.needBossDecision).length
   const issueCount = items.filter(item => item.status === '异常' || item.status === '暂停').length
-  const amountTotal = items.reduce((sum, item) => sum + (item.purchaseAmount ?? 0), 0)
+  const amountTotal = items.reduce((sum, item) => sum + toAmount(item.purchaseAmount), 0)
 
   return (
     <WorkspaceMotion>
@@ -304,7 +318,7 @@ function PurchaseBoardContent() {
           { label: '采购事项', value: items.length, hint: '当前筛选结果', tone: 'primary' },
           { label: '需老板决策', value: bossDecisionCount, hint: '待拍板', tone: bossDecisionCount ? 'warning' : 'success' },
           { label: '异常/暂停', value: issueCount, hint: '需处理阻塞', tone: issueCount ? 'danger' : 'neutral' },
-          { label: '采购金额', value: `¥${amountTotal.toLocaleString()}`, hint: '当前列表合计', tone: 'slate' },
+          { label: '采购金额', value: formatCurrency(amountTotal), hint: '当前列表合计', tone: 'slate' },
         ]}
       />
 
@@ -407,7 +421,7 @@ function PurchaseBoardContent() {
                           <div className="text-[11px] text-gray-400 mt-2 truncate" title={item.companyName}>🏢 {item.companyName}</div>
                         )}
                         {item.purchaseAmount !== null && (
-                          <div className="text-[11px] font-medium text-blue-700 mt-1">金额: ¥{Number(item.purchaseAmount).toLocaleString()}</div>
+                          <div className="text-[11px] font-medium text-blue-700 mt-1">金额: {formatCurrency(toAmount(item.purchaseAmount))}</div>
                         )}
                         <div className="flex gap-1.5 text-[11px] flex-wrap mt-2 mb-2">
                           <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{item.requester?.name || '无需求提交人'}</span>

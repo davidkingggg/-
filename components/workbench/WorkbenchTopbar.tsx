@@ -32,7 +32,7 @@ export function WorkbenchTopbar() {
     <header className="sticky top-0 z-30 flex h-[64px] items-center gap-3 border-b border-slate-200 bg-white/[0.92] px-4 backdrop-blur-xl md:px-6">
       <div className="hidden h-9 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-[13px] font-bold text-slate-700 shadow-sm md:inline-flex">
         <Settings2 className="h-4 w-4 text-slate-500" />
-        长沙市本级
+        宁波本地工作区
       </div>
 
       <form
