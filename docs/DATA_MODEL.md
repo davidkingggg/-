@@ -280,8 +280,9 @@
 - `passwordHash`: 密码哈希
 - `name`: 登录显示姓名
 - `personId`: 绑定的内部人员 ID（可空、唯一）
+- `sessionVersion`: 会话版本号；密码重置时递增，用于让旧 session 失效
 - `isAdmin`: 是否管理员
-- `isActive`: 是否启用
+- `isActive`: 是否启用；`revokedAt` 一旦有值，不允许直接恢复旧 Token，只能重置生成新明文 Token
 - `createdAt`: 创建时间
 - `updatedAt`: 更新时间
 
@@ -294,7 +295,7 @@
 - `userId`: 绑定登录账号
 - `isActive`: 是否启用
 - `lastUsedAt`: 最近使用时间
-- `revokedAt`: 停用时间
+- `revokedAt`: 撤销时间
 - `createdAt`: 创建时间
 - `updatedAt`: 更新时间
 

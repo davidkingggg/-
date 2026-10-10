@@ -6,6 +6,7 @@
 export const CSV_BOM = '\uFEFF'
 
 export type CSVValue = string | number | boolean | null | undefined
+export type CSVRow = string[] & { rowNumber?: number }
 
 // ─── 布尔值解析 ───────────────────────────────────────────────
 const BOOLEAN_TRUE = new Set(['是', 'true', 'yes', '1'])
@@ -49,6 +50,9 @@ export function parseTaxRate(value: string | undefined | null): { ok: true; valu
     return { ok: false, error: `税率「${value}」超出范围，必须在 0-100 之间` }
   }
   // 如果有 % 号，或值大于 1（按百分数处理）
+  if (!hasPercent && num === 1) {
+    return { ok: false, error: '税率 1 语义不明确，请使用 100% 或 0.01' }
+  }
   if (hasPercent || num > 1) {
     return { ok: true, value: num / 100 }
   }
@@ -158,26 +162,41 @@ export function parseCSVLine(line: string): string[] {
   return result
 }
 
-export function parseCSV(text: string): { headers: string[]; rows: string[][] } {
+export function parseCSV(text: string): { headers: CSVRow; rows: CSVRow[] } {
   const normalizedText = detectAndFixEncoding(text)
   const records = parseCSVRecords(normalizeCSVText(normalizedText)).filter((row) =>
     row.some((cell) => cell.trim() !== '')
   )
-  if (records.length === 0) return { headers: [], rows: [] }
+  if (records.length === 0) return { headers: [] as CSVRow, rows: [] }
   const headers = records[0]
   const rows = records.slice(1)
   return { headers, rows }
+}
+
+export function getCSVRowNumber(row: string[] | CSVRow, fallback: number) {
+  return typeof (row as CSVRow).rowNumber === 'number' ? (row as CSVRow).rowNumber! : fallback
 }
 
 export function normalizeCSVText(text: string) {
   return text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
 }
 
-function parseCSVRecords(text: string): string[][] {
-  const records: string[][] = []
-  let row: string[] = []
+function parseCSVRecords(text: string): CSVRow[] {
+  const records: CSVRow[] = []
+  let row: CSVRow = [] as CSVRow
   let current = ''
   let inQuotes = false
+  let lineNumber = 1
+  let rowStartLine = 1
+
+  const pushRow = () => {
+    row.push(current.trim())
+    row.rowNumber = rowStartLine
+    records.push(row)
+    row = [] as CSVRow
+    current = ''
+    rowStartLine = lineNumber + 1
+  }
 
   for (let i = 0; i < text.length; i++) {
     const char = text[i]
@@ -192,6 +211,7 @@ function parseCSVRecords(text: string): string[][] {
         }
       } else {
         current += char
+        if (char === '\n') lineNumber++
       }
       continue
     }
@@ -202,10 +222,8 @@ function parseCSVRecords(text: string): string[][] {
       row.push(current.trim())
       current = ''
     } else if (char === '\n') {
-      row.push(current.trim())
-      records.push(row)
-      row = []
-      current = ''
+      pushRow()
+      lineNumber++
     } else {
       current += char
     }
@@ -213,6 +231,7 @@ function parseCSVRecords(text: string): string[][] {
 
   if (current !== '' || row.length > 0) {
     row.push(current.trim())
+    row.rowNumber = rowStartLine
     records.push(row)
   }
 
@@ -285,6 +304,10 @@ export interface RowError {
 export function escapeCSV(value: CSVValue): string {
   if (value === null || value === undefined) return ''
   const str = String(value)
+  // OWASP CSV injection: neutralize formula trigger characters
+  if (/^[=+\-@\t\r]/.test(str)) {
+    return `"${str.replace(/"/g, '""')}"`
+  }
   if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
     return `"${str.replace(/"/g, '""')}"`
   }
@@ -317,9 +340,9 @@ export function formatCSVDate(value: Date | string | null | undefined) {
   if (!value) return ''
   const date = typeof value === 'string' ? new Date(value) : value
   if (Number.isNaN(date.getTime())) return ''
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
 

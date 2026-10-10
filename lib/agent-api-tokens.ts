@@ -53,10 +53,15 @@ export async function findActiveAgentApiToken(rawToken: string) {
 
   if (!record || !record.isActive || record.revokedAt || !record.user.isActive) return null
 
-  await prisma.agentApiToken.update({
-    where: { id: record.id },
-    data: { lastUsedAt: new Date() },
-  })
+  // 节流：仅当 lastUsedAt 超过 10 分钟时才更新，避免每次请求都写 SQLite
+  const shouldUpdate = !record.lastUsedAt ||
+    (Date.now() - record.lastUsedAt.getTime()) > 10 * 60 * 1000
+  if (shouldUpdate) {
+    prisma.agentApiToken.update({
+      where: { id: record.id },
+      data: { lastUsedAt: new Date() },
+    }).catch(() => undefined) // fire-and-forget
+  }
 
   return record
 }

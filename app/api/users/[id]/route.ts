@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { ADMIN_ERROR, hashPassword, isAdminError, requireAdmin, validatePasswordPolicy } from '@/lib/auth-utils'
+import { ADMIN_ERROR, AUTH_ERROR, hashPassword, isAdminError, isAuthError, validatePasswordPolicy } from '@/lib/auth-utils'
+import { requireSessionAdminForDestructive } from '@/lib/session-admin-auth'
 import { normalizePersonIdInput, validatePersonBinding } from '@/lib/user-person-binding'
 
 function normalizeOptionalText(value: unknown): string | undefined {
@@ -23,7 +24,7 @@ async function isLastActiveAdmin(userId: string): Promise<boolean> {
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAdmin()
+    await requireSessionAdminForDestructive()
     const { id } = await params
     const body = await request.json()
 
@@ -32,7 +33,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: '用户不存在' }, { status: 404 })
     }
 
-    const data: { name?: string; isAdmin?: boolean; passwordHash?: string; personId?: string | null } = {}
+    const data: {
+      name?: string
+      isAdmin?: boolean
+      passwordHash?: string
+      personId?: string | null
+      sessionVersion?: { increment: number }
+    } = {}
     const name = normalizeOptionalText(body.name)
     const password = normalizeOptionalText(body.password)
     const personIdInput = normalizePersonIdInput(body.personId)
@@ -63,6 +70,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         return NextResponse.json({ error: passwordError }, { status: 400 })
       }
       data.passwordHash = await hashPassword(password)
+      data.sessionVersion = { increment: 1 }
     }
 
     if (personIdInput !== undefined) {
@@ -86,6 +94,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(updated)
   } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     if (isAdminError(error)) {
       return NextResponse.json({ error: ADMIN_ERROR }, { status: 403 })
     }
@@ -98,7 +109,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const currentAdmin = await requireAdmin()
+    const currentAdmin = await requireSessionAdminForDestructive()
     const { id } = await params
     const { isActive } = await request.json()
 
@@ -135,6 +146,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     return NextResponse.json(updated)
   } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     if (isAdminError(error)) {
       return NextResponse.json({ error: ADMIN_ERROR }, { status: 403 })
     }

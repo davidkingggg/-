@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { parseCSV, parseDate, parseDecimal, type RowError } from '@/lib/csv-utils'
+import { parseCSV, parseDate, parseDecimal, getCSVRowNumber, type RowError } from '@/lib/csv-utils'
 import { isValidEnum } from '@/lib/workflow-validation'
 import { PURCHASE_STAGES, PRIORITIES, PURCHASE_STATUSES } from '@/lib/workflow-constants'
 import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
     const csvSupplierNames = new Set<string>()
 
     for (let i = 0; i < rows.length; i++) {
-      const rowNum = i + 2 // 从 2 开始（1 是表头）
+      const rowNum = getCSVRowNumber(rows[i], i + 2)
       const raw: Record<string, string> = {}
       for (const [header, idx] of Object.entries(headerIndex)) {
         raw[header] = idx >= 0 ? rows[i][idx] ?? '' : ''

@@ -6,7 +6,7 @@ set -Eeuo pipefail
 # remote environment. Do not put passwords in this script.
 #
 # Local variables:
-#   SSH_HOST          Remote host or IP. Defaults to the current Tencent Cloud server.
+#   SSH_HOST          Remote host or IP. Required; do not hardcode production IPs.
 #   SSH_USER          Remote Linux user.
 #   SSH_PORT          SSH port.
 #   SSH_KEY           Optional private key path, for example ~/.ssh/id_ed25519.
@@ -25,7 +25,7 @@ set -Eeuo pipefail
 #   BASE_URL          Public nginx URL used for endpoint verification.
 #   SUDO_PASSWORD     Optional sudo password for servers without passwordless sudo.
 
-SSH_HOST="${SSH_HOST:-1.117.58.118}"
+SSH_HOST="${SSH_HOST:-}"
 SSH_USER="${SSH_USER:-ubuntu}"
 SSH_PORT="${SSH_PORT:-22}"
 SSH_KEY="${SSH_KEY:-}"

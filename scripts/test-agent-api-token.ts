@@ -21,6 +21,7 @@ const authPatterns = [
   /await\s+requireUser\(/,
   /await\s+requireAdmin\(/,
   /await\s+requireSessionAdmin\(/,
+  /await\s+requireSessionAdminForDestructive\(/,
   /await\s+ensureAdminTaskOwnerPersonId\(/,
   /await\s+getCurrentUser\(/,
 ]

@@ -17,11 +17,13 @@ export async function GET() {
     if (
       session.name !== user.name ||
       session.isAdmin !== user.isAdmin ||
+      session.sessionVersion !== user.sessionVersion ||
       currentPersonId !== nextPersonId ||
       currentPersonName !== nextPersonName
     ) {
       session.name = user.name
       session.isAdmin = user.isAdmin
+      session.sessionVersion = user.sessionVersion
       session.personId = nextPersonId || undefined
       session.personName = nextPersonName || undefined
       await session.save()
@@ -34,6 +36,7 @@ export async function GET() {
         username: session.username || null,
         name: session.name || null,
         isAdmin: session.isAdmin ?? false,
+        sessionVersion: session.sessionVersion ?? null,
         personId: session.personId || null,
         personName: session.personName || null,
       },

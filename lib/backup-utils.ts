@@ -50,7 +50,11 @@ function formatLocalTimestamp(date = new Date()) {
 }
 
 function getBackupDir() {
-  return path.resolve(process.env.BACKUP_DIR?.trim() || path.join(process.cwd(), 'backups'))
+  return path.resolve(
+    /* turbopackIgnore: true */ (
+      process.env.BACKUP_DIR?.trim() || path.join(/* turbopackIgnore: true */ process.cwd(), 'backups')
+    )
+  )
 }
 
 async function pathExists(filePath: string) {
@@ -68,7 +72,7 @@ async function createUniqueBackupFileName(prefix: string) {
   const backupDir = getBackupDir()
   for (let index = 0; index < 100; index += 1) {
     const fileName = `${prefix}${formatLocalTimestamp()}${suffix}.sqlite`
-    const targetPath = path.join(backupDir, fileName)
+    const targetPath = path.join(/* turbopackIgnore: true */ backupDir, fileName)
     if (!(await pathExists(targetPath))) return { fileName, targetPath }
     suffix = `-${index + 1}`
   }
@@ -113,7 +117,7 @@ export function validateBackupFileName(fileName: unknown): string {
 
 export function resolveBackupPath(fileName: string) {
   const backupDir = getBackupDir()
-  const targetPath = path.resolve(backupDir, fileName)
+  const targetPath = path.resolve(/* turbopackIgnore: true */ backupDir, fileName)
   const relativePath = path.relative(backupDir, targetPath)
   if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
     assertError('备份文件路径不在允许的备份目录内。')
@@ -145,7 +149,7 @@ export async function listBackups(): Promise<BackupItem[]> {
         if (!BACKUP_NAME_PATTERN.test(fileName)) return null
         const type = getBackupType(fileName)
         if (!type) return null
-        const fileStat = await stat(path.join(backupDir, fileName))
+        const fileStat = await stat(path.join(/* turbopackIgnore: true */ backupDir, fileName))
         return {
           fileName,
           type,

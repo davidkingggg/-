@@ -8,6 +8,7 @@ export const AUTH_ERROR = '未登录'
 export const ADMIN_ERROR = '需要管理员权限'
 export const PERSON_BINDING_ERROR = '当前账号未绑定人员，请联系管理员在用户管理中绑定后再使用个人数据'
 export const PASSWORD_MIN_LENGTH = 10
+export const PASSWORD_MAX_LENGTH = 128
 export const PASSWORD_POLICY_ERROR = `密码至少 ${PASSWORD_MIN_LENGTH} 位`
 
 export async function hashPassword(password: string): Promise<string> {
@@ -19,7 +20,9 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export function validatePasswordPolicy(password: string): string | null {
-  return password.length < PASSWORD_MIN_LENGTH ? PASSWORD_POLICY_ERROR : null
+  if (password.length < PASSWORD_MIN_LENGTH) return PASSWORD_POLICY_ERROR
+  if (password.length > PASSWORD_MAX_LENGTH) return `密码不能超过 ${PASSWORD_MAX_LENGTH} 个字符`
+  return null
 }
 
 export function isAdminError(error: unknown): boolean {
@@ -77,6 +80,7 @@ export async function getCurrentUser() {
       isAdmin: true,
       isActive: true,
       personId: true,
+      sessionVersion: true,
       person: {
         select: {
           id: true,
@@ -90,6 +94,7 @@ export async function getCurrentUser() {
   })
 
   if (!user || !user.isActive) return null
+  if (session.sessionVersion !== user.sessionVersion) return null
   if (user.person && !user.person.isActive) {
     return {
       ...user,

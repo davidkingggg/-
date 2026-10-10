@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
+import { ADMIN_ERROR, AUTH_ERROR, isAdminError, isAuthError, requireAdmin } from '@/lib/auth-utils'
 
 const VALID_ROLES = ['总经理助理', '老板', '销售', '商务', '工程师', '采购需求提交人', '行政', '其他']
 
@@ -9,7 +9,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireUser()
+    await requireAdmin()
     const { id } = await params
     const body = await request.json()
 
@@ -45,6 +45,9 @@ export async function PUT(
     if (isAuthError(error)) {
       return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
     }
+    if (isAdminError(error)) {
+      return NextResponse.json({ error: ADMIN_ERROR }, { status: 403 })
+    }
     return NextResponse.json({ error: '编辑人员失败' }, { status: 500 })
   }
 }
@@ -54,12 +57,22 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireUser()
+    await requireAdmin()
     const { id } = await params
 
     const existing = await prisma.person.findUnique({ where: { id } })
     if (!existing) {
       return NextResponse.json({ error: '人员不存在' }, { status: 404 })
+    }
+
+    // 检查是否正被活跃用户绑定
+    const boundUser = await prisma.user.findFirst({
+      where: { personId: id, isActive: true },
+    })
+    if (boundUser) {
+      return NextResponse.json({
+        error: `此人已绑定用户「${boundUser.username}」，不能停用。请先在用户管理中解除绑定。`
+      }, { status: 409 })
     }
 
     const person = await prisma.person.update({
@@ -70,6 +83,9 @@ export async function PATCH(
   } catch (error) {
     if (isAuthError(error)) {
       return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
+    if (isAdminError(error)) {
+      return NextResponse.json({ error: ADMIN_ERROR }, { status: 403 })
     }
     return NextResponse.json({ error: '停用人员失败' }, { status: 500 })
   }

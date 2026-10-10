@@ -45,48 +45,31 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     await requireUser()
     const { id } = await params;
     const body = await request.json();
-    const {
-      title,
-      supplierId,
-      categoryId,
-      requesterId,
-      ownerId,
-      salesPersonId,
-      currentStage,
-      priority,
-      dueDate,
-      currentProblem,
-      nextAction,
-      needBossDecision,
-      needPaymentRequest,
-      purchaseAmount,
-      contractNo,
-      contractDate,
-      paymentRequestDate,
-      arrivalDate,
-      acceptanceDate,
-      invoiceDate,
-      invoiceNo,
-      prepaymentAmount,
-      offsetAmount,
-      hasArrived,
-      hasAccepted,
-      hasInvoice,
-      hasPrepaymentOffset,
-      status,
-      remark,
-      companyName,
-    } = body;
 
+    // 获取现有记录，仅用 body 中存在的字段做合并覆盖
+    const existing = await prisma.purchaseExecutionProcess.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: '记录不存在' }, { status: 404 });
+    }
+
+    // 必填字段始终从 body 取
+    const title = typeof body.title === 'string' ? body.title.trim() : existing.title;
     if (!title) {
       return NextResponse.json({ error: '采购事项名称(title)为必填项' }, { status: 400 });
     }
 
-    // Validation
+    // 必填外键始终从 body 取
+    const supplierId = body.supplierId ?? existing.supplierId;
+    const categoryId = body.categoryId ?? existing.categoryId;
+    const requesterId = body.requesterId ?? existing.requesterId;
+    const ownerId = body.ownerId ?? existing.ownerId;
+    const currentStage = body.currentStage ?? existing.currentStage;
+    const status = body.status ?? existing.status;
+
+    // 验证必填外键和枚举
     await validateSupplierAndCategory(supplierId, categoryId);
     await validatePerson(requesterId, '需求提交人');
     await validatePerson(ownerId, '负责人');
-    await validatePerson(salesPersonId, '销售/配合人员');
 
     if (!isValidEnum(currentStage, PURCHASE_STAGES)) {
       return NextResponse.json({ error: '无效的阶段' }, { status: 400 });
@@ -94,55 +77,65 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!isValidEnum(status, PURCHASE_STATUSES)) {
       return NextResponse.json({ error: '无效的状态' }, { status: 400 });
     }
-    if (priority && !isValidEnum(priority, PRIORITIES)) {
-      return NextResponse.json({ error: '无效的优先级' }, { status: 400 });
+
+    // 可选字段 — 仅 body 中存在时覆盖，否则保留原值
+    const data: Record<string, unknown> = {
+      title, supplierId, categoryId, requesterId, ownerId, currentStage, status,
+    };
+
+    // 可选外键
+    if ('salesPersonId' in body) {
+      const v = body.salesPersonId || null;
+      if (v) await validatePerson(v, '销售/配合人员');
+      data.salesPersonId = v;
+    }
+    if ('priority' in body) {
+      const v = body.priority || null;
+      if (v && !isValidEnum(v, PRIORITIES)) {
+        return NextResponse.json({ error: '无效的优先级' }, { status: 400 });
+      }
+      data.priority = v;
     }
 
-    if (!isValidAmount(purchaseAmount) || !isValidAmount(prepaymentAmount) || !isValidAmount(offsetAmount)) {
+    // 日期字段
+    const dateFields = ['dueDate', 'contractDate', 'paymentRequestDate', 'arrivalDate', 'acceptanceDate', 'invoiceDate'] as const;
+    for (const f of dateFields) {
+      if (f in body) data[f] = parseDate(body[f]);
+    }
+
+    // 金额字段
+    if ('purchaseAmount' in body) data.purchaseAmount = parseAmount(body.purchaseAmount);
+    if ('prepaymentAmount' in body) data.prepaymentAmount = parseAmount(body.prepaymentAmount);
+    if ('offsetAmount' in body) data.offsetAmount = parseAmount(body.offsetAmount);
+
+    // 金额校验（用合并后的值）
+    const finalPurchase = data.purchaseAmount ?? existing.purchaseAmount;
+    const finalPrepayment = data.prepaymentAmount ?? existing.prepaymentAmount;
+    const finalOffset = data.offsetAmount ?? existing.offsetAmount;
+    if (!isValidAmount(finalPurchase) || !isValidAmount(finalPrepayment) || !isValidAmount(finalOffset)) {
       return NextResponse.json({ error: '金额必须为非负数' }, { status: 400 });
     }
-
-    const parsedPrepaymentAmount = parseAmount(prepaymentAmount) || 0;
-    const parsedOffsetAmount = parseAmount(offsetAmount) || 0;
-
-    if (parsedOffsetAmount > parsedPrepaymentAmount) {
+    const numPrepayment = parseAmount(finalPrepayment) || 0;
+    const numOffset = parseAmount(finalOffset) || 0;
+    if (numOffset > numPrepayment) {
       return NextResponse.json({ error: '已抵充金额不能大于预付款金额' }, { status: 400 });
+    }
+
+    // 布尔字段 — 仅 body 中存在时覆盖
+    const boolFields = ['needBossDecision', 'needPaymentRequest', 'hasArrived', 'hasAccepted', 'hasInvoice', 'hasPrepaymentOffset'] as const;
+    for (const f of boolFields) {
+      if (f in body) data[f] = Boolean(body[f]);
+    }
+
+    // 字符串字段 — 仅 body 中存在时覆盖
+    const textFields = ['currentProblem', 'nextAction', 'contractNo', 'invoiceNo', 'remark', 'companyName'] as const;
+    for (const f of textFields) {
+      if (f in body) data[f] = body[f] || null;
     }
 
     const item = await prisma.purchaseExecutionProcess.update({
       where: { id },
-      data: {
-        title,
-        supplierId,
-        categoryId,
-        requesterId,
-        ownerId,
-        salesPersonId: salesPersonId || null,
-        currentStage,
-        priority: priority || null,
-        dueDate: parseDate(dueDate),
-        currentProblem: currentProblem || null,
-        nextAction: nextAction || null,
-        needBossDecision: Boolean(needBossDecision),
-        needPaymentRequest: Boolean(needPaymentRequest),
-        purchaseAmount: parseAmount(purchaseAmount),
-        contractNo: contractNo || null,
-        contractDate: parseDate(contractDate),
-        paymentRequestDate: parseDate(paymentRequestDate),
-        arrivalDate: parseDate(arrivalDate),
-        acceptanceDate: parseDate(acceptanceDate),
-        invoiceDate: parseDate(invoiceDate),
-        invoiceNo: invoiceNo || null,
-        prepaymentAmount: parseAmount(prepaymentAmount),
-        offsetAmount: parseAmount(offsetAmount),
-        hasArrived: Boolean(hasArrived),
-        hasAccepted: Boolean(hasAccepted),
-        hasInvoice: Boolean(hasInvoice),
-        hasPrepaymentOffset: Boolean(hasPrepaymentOffset),
-        status,
-        remark: remark || null,
-        companyName: companyName || null,
-      },
+      data,
     });
 
     return NextResponse.json(item);

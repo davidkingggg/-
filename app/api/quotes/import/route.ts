@@ -10,6 +10,7 @@ import {
   parseInt,
   parseFileName,
   parseFileType,
+  getCSVRowNumber,
   type RowError,
 } from '@/lib/csv-utils'
 
@@ -235,7 +236,7 @@ export async function POST(request: Request) {
 
     for (let ri = 0; ri < rows.length; ri++) {
       const row = rows[ri]
-      const rowNum = ri + 2 // Excel 行号（1 是表头）
+      const rowNum = getCSVRowNumber(row, ri + 2)
       const data: Record<string, string> = {}
       for (let ci = 0; ci < row.length; ci++) {
         if (fieldMap[ci]) data[fieldMap[ci]] = row[ci]
@@ -290,6 +291,8 @@ export async function POST(request: Request) {
       const priceResult = parseDecimal(data.price)
       if (!priceResult.ok) {
         errors.push(rowError(rowNum, '报价', data.price, priceResult.error, '请填写数字格式的报价金额，例如 1280 或 1280.50。'))
+      } else if (priceResult.value != null && priceResult.value < 0) {
+        errors.push(rowError(rowNum, '报价', data.price, '报价不能为负数', '请填写非负数报价，例如 1280 或 1280.50。'))
       }
 
       // 最小起订量

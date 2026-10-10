@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { ADMIN_ERROR, isAdminError, requireAdmin } from '@/lib/auth-utils'
+import { requireSessionAdminForDestructive } from '@/lib/session-admin-auth'
 
 type PrismaDelegate = {
   delete: (args: { where: Record<string, unknown> }) => Promise<unknown>
@@ -82,16 +82,18 @@ function itemKey(item: DeleteItem) {
   return `${item.type}:${item.id}`
 }
 
-async function collectCascadeChildren(items: DeleteItem[]): Promise<DeleteItem[]> {
-  const children: DeleteItem[] = []
+async function collectCascadeChildrenRecursive(items: DeleteItem[]): Promise<DeleteItem[]> {
+  const allChildren: DeleteItem[] = []
   const seen = new Set(items.map(itemKey))
+  let frontier = items
 
-  for (const item of items) {
-    // Standard cascade: collect child records by FK
-    const rules = CASCADE_RULES[item.type]
-    if (rules) {
-      for (const [childType, childModel, fkField] of rules) {
-        try {
+  while (frontier.length > 0) {
+    const next: DeleteItem[] = []
+    for (const item of frontier) {
+      // Standard cascade: collect child records by FK
+      const rules = CASCADE_RULES[item.type]
+      if (rules) {
+        for (const [childType, childModel, fkField] of rules) {
           const delegate = getDelegate(childModel)
           const rows = await delegate.findMany({
             where: { [fkField]: item.id },
@@ -102,35 +104,22 @@ async function collectCascadeChildren(items: DeleteItem[]): Promise<DeleteItem[]
             const key = itemKey(child)
             if (!seen.has(key)) {
               seen.add(key)
-              children.push(child)
+              allChildren.push(child)
+              next.push(child)
             }
           }
-        } catch {
-          // Skip if model query fails
         }
       }
     }
-
-    // Junction tables: delete directly by FK (composite key, no single `id`)
-    const junctions = CASCADE_JUNCTION[item.type]
-    if (junctions) {
-      for (const [model, fkField] of junctions) {
-        try {
-          const delegate = getDelegate(model)
-          await delegate.deleteMany({ where: { [fkField]: item.id } })
-        } catch {
-          // Skip if junction delete fails
-        }
-      }
-    }
+    frontier = next
   }
 
-  return children
+  return allChildren
 }
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin()
+    await requireSessionAdminForDestructive()
 
     const body = await request.json()
     const items: DeleteItem[] = body.items
@@ -152,64 +141,59 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Collect child records that must be deleted first (cascade)
-    const children = await collectCascadeChildren(items)
-
-    // Merge selected items + cascade children, deduplicate
+    // Collect child records recursively and merge
+    const children = await collectCascadeChildrenRecursive(items)
     const seen = new Set<string>()
     const allItems: DeleteItem[] = []
-    for (const child of children) {
+    for (const child of [...children, ...items]) {
       const key = itemKey(child)
       if (!seen.has(key)) {
         seen.add(key)
         allItems.push(child)
       }
     }
-    for (const item of items) {
-      const key = itemKey(item)
-      if (!seen.has(key)) {
-        seen.add(key)
-        allItems.push(item)
-      }
-    }
 
     // Sort: children (low order) first, parents (high order) last
     allItems.sort((a, b) => (DELETE_ORDER[a.type] ?? 99) - (DELETE_ORDER[b.type] ?? 99))
 
-    let deletedCount = 0
-    const errors: string[] = []
-
+    // 删除 junction 关联表（在事务外，因为它们是纯 FK 级联）
     for (const item of allItems) {
-      try {
-        const modelName = DELETE_TYPE_WHITELIST[item.type]
-        if (!modelName) continue
-        const delegate = getDelegate(modelName)
-        await delegate.delete({ where: { id: item.id } })
-        deletedCount++
-      } catch {
-        errors.push(`${item.type}/${item.id}`)
+      const junctions = CASCADE_JUNCTION[item.type]
+      if (junctions) {
+        for (const [model, fkField] of junctions) {
+          const delegate = getDelegate(model)
+          await delegate.deleteMany({ where: { [fkField]: item.id } })
+        }
       }
     }
 
-    if (errors.length > 0 && deletedCount === 0) {
-      return NextResponse.json({ error: '删除失败，记录可能不存在或存在关联数据' }, { status: 500 })
-    }
+    // 在事务中执行物理删除，失败则回滚
+    let deletedCount = 0
+    await prisma.$transaction(async (tx) => {
+      for (const item of allItems) {
+        const modelName = DELETE_TYPE_WHITELIST[item.type]
+        if (!modelName) continue
+        const delegate = (tx as unknown as Record<string, PrismaDelegate>)[modelName]
+        if (!delegate) continue
+        await delegate.delete({ where: { id: item.id } })
+        deletedCount++
+      }
+    })
 
     const cascadeCount = allItems.length - items.length
     const messageParts = [`成功删除 ${deletedCount} 条记录`]
     if (cascadeCount > 0) messageParts.push(`（含 ${cascadeCount} 条关联记录）`)
-    if (errors.length > 0) messageParts.push(`，失败 ${errors.length} 条`)
 
     return NextResponse.json({
       success: true,
       deleted: deletedCount,
-      failed: errors.length,
       cascade: cascadeCount,
       message: messageParts.join(''),
     })
   } catch (error) {
-    if (isAdminError(error)) {
-      return NextResponse.json({ error: ADMIN_ERROR }, { status: 403 })
+    if (error instanceof Error && (error.message === '未登录' || error.message === '需要管理员权限')) {
+      const status = error.message === '未登录' ? 401 : 403
+      return NextResponse.json({ error: error.message }, { status })
     }
     return NextResponse.json({ error: '批量删除失败' }, { status: 500 })
   }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
+import { ADMIN_ERROR, AUTH_ERROR, isAdminError, isAuthError, requireAdmin, requireUser } from '@/lib/auth-utils'
 
 const VALID_ROLES = ['总经理助理', '老板', '销售', '商务', '工程师', '采购需求提交人', '行政', '其他']
 
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: Request) {
   try {
-    await requireUser()
+    await requireAdmin()
     const body = await request.json()
 
     if (!body.name || !body.name.trim()) {
@@ -58,6 +58,9 @@ export async function POST(request: Request) {
   } catch (error) {
     if (isAuthError(error)) {
       return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
+    if (isAdminError(error)) {
+      return NextResponse.json({ error: ADMIN_ERROR }, { status: 403 })
     }
     return NextResponse.json({ error: '新增人员失败' }, { status: 500 })
   }

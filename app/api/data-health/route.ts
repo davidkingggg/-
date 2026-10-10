@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { ADMIN_ERROR, isAdminError, requireAdmin } from '@/lib/auth-utils'
+import { AUTH_ERROR, ADMIN_ERROR, isAdminError, isAuthError, requireAdmin } from '@/lib/auth-utils'
 import { buildDataHealthReport } from '@/lib/data-health'
 
 export const runtime = 'nodejs'
@@ -10,6 +10,9 @@ export async function GET() {
     await requireAdmin()
     return NextResponse.json(await buildDataHealthReport())
   } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     if (isAdminError(error)) {
       return NextResponse.json({ error: ADMIN_ERROR }, { status: 403 })
     }

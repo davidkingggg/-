@@ -41,23 +41,19 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     await requireUser()
     const { id } = await params;
     const body = await request.json();
-    const {
-      supplierId,
-      categoryId,
-      currentStage,
-      ownerId,
-      priority,
-      dueDate,
-      currentProblem,
-      nextAction,
-      needBossDecision,
-      needSalesSupport,
-      needBusinessAssistantSupport,
-      status,
-      remark,
-    } = body;
 
-    // Validation
+    const existing = await prisma.supplierDevelopmentProcess.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: '记录不存在' }, { status: 404 });
+    }
+
+    // 必填字段
+    const supplierId = body.supplierId ?? existing.supplierId;
+    const categoryId = body.categoryId ?? existing.categoryId;
+    const ownerId = body.ownerId ?? existing.ownerId;
+    const currentStage = body.currentStage ?? existing.currentStage;
+    const status = body.status ?? existing.status;
+
     await validateSupplierAndCategory(supplierId, categoryId);
     await validatePerson(ownerId, '负责人');
 
@@ -67,28 +63,26 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (!isValidEnum(status, DEVELOPMENT_STATUSES)) {
       return NextResponse.json({ error: '无效的状态' }, { status: 400 });
     }
-    if (priority && !isValidEnum(priority, PRIORITIES)) {
-      return NextResponse.json({ error: '无效的优先级' }, { status: 400 });
-    }
 
-    const item = await prisma.supplierDevelopmentProcess.update({
-      where: { id },
-      data: {
-        supplierId,
-        categoryId,
-        currentStage,
-        ownerId,
-        priority: priority || null,
-        dueDate: parseDate(dueDate),
-        currentProblem: currentProblem || null,
-        nextAction: nextAction || null,
-        needBossDecision: Boolean(needBossDecision),
-        needSalesSupport: Boolean(needSalesSupport),
-        needBusinessAssistantSupport: Boolean(needBusinessAssistantSupport),
-        status,
-        remark: remark || null,
-      },
-    });
+    const data: Record<string, unknown> = { supplierId, categoryId, ownerId, currentStage, status };
+
+    // 可选字段 — 仅 body 中存在时覆盖
+    if ('priority' in body) {
+      const v = body.priority || null;
+      if (v && !isValidEnum(v, PRIORITIES)) {
+        return NextResponse.json({ error: '无效的优先级' }, { status: 400 });
+      }
+      data.priority = v;
+    }
+    if ('dueDate' in body) data.dueDate = parseDate(body.dueDate);
+    if ('currentProblem' in body) data.currentProblem = body.currentProblem || null;
+    if ('nextAction' in body) data.nextAction = body.nextAction || null;
+    if ('needBossDecision' in body) data.needBossDecision = Boolean(body.needBossDecision);
+    if ('needSalesSupport' in body) data.needSalesSupport = Boolean(body.needSalesSupport);
+    if ('needBusinessAssistantSupport' in body) data.needBusinessAssistantSupport = Boolean(body.needBusinessAssistantSupport);
+    if ('remark' in body) data.remark = body.remark || null;
+
+    const item = await prisma.supplierDevelopmentProcess.update({ where: { id }, data });
 
     return NextResponse.json(item);
   } catch (error: unknown) {

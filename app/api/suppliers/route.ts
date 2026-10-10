@@ -6,6 +6,17 @@ import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 const VALID_COOPERATION = ['强', '一般', '弱', '未确认']
 const VALID_PRICE_LEVELS = ['高', '中', '低', '未知']
 const VALID_RECOMMENDED = ['A优先推荐', 'B备选', 'C暂不推荐', '未评级']
+const MAX_PAGE_SIZE = 100
+
+function parsePagination(searchParams: URLSearchParams) {
+  const rawPage = searchParams.get('page')
+  const rawPageSize = searchParams.get('pageSize')
+  if (!rawPage && !rawPageSize) return null
+
+  const page = Math.max(1, Number.parseInt(rawPage || '1', 10) || 1)
+  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number.parseInt(rawPageSize || '20', 10) || 20))
+  return { page, pageSize, skip: (page - 1) * pageSize }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,6 +29,7 @@ export async function GET(request: NextRequest) {
     const hasQuoted = searchParams.get('hasQuoted')
     const hasVisited = searchParams.get('hasVisited')
     const riskTagId = searchParams.get('riskTagId')
+    const pagination = parsePagination(searchParams)
 
     const where: Prisma.SupplierWhereInput = { isArchived: false }
 
@@ -35,14 +47,32 @@ export async function GET(request: NextRequest) {
       where.riskTags = { some: { riskTagId } }
     }
 
-    const suppliers = await prisma.supplier.findMany({
+    const query = {
       where,
       include: {
         category: { select: { id: true, name: true } },
         riskTags: { include: { riskTag: true } },
       },
-      orderBy: { createdAt: 'desc' },
-    })
+      orderBy: { createdAt: 'desc' as const },
+      ...(pagination ? { skip: pagination.skip, take: pagination.pageSize } : {}),
+    }
+    const [suppliers, total] = pagination
+      ? await prisma.$transaction([
+          prisma.supplier.findMany(query),
+          prisma.supplier.count({ where }),
+        ])
+      : [await prisma.supplier.findMany(query), null]
+    if (pagination) {
+      return NextResponse.json({
+        items: suppliers,
+        pagination: {
+          page: pagination.page,
+          pageSize: pagination.pageSize,
+          total,
+          totalPages: Math.ceil((total ?? 0) / pagination.pageSize),
+        },
+      })
+    }
     return NextResponse.json(suppliers)
   } catch (error) {
     if (isAuthError(error)) {

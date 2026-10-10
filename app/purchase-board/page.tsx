@@ -64,6 +64,13 @@ interface ImportErrorItem {
   suggestion?: string
 }
 
+interface PurchaseBoardStats {
+  totalCount: number
+  bossDecisionCount: number
+  issueCount: number
+  amountTotal: number
+}
+
 function PurchaseBoardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -71,6 +78,7 @@ function PurchaseBoardContent() {
   const { categories, people } = useWorkflowLookups()
 
   const [items, setItems] = useState<ProcessItem[]>([])
+  const [stats, setStats] = useState<PurchaseBoardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
   const [collapsedStages, setCollapsedStages] = useState<Set<string>>(new Set())
@@ -152,9 +160,24 @@ function PurchaseBoardContent() {
     }
   }, [filterOwnerId, filterRequesterId, filterSalesPersonId, filterStatus, filterPriority, router, showToast])
 
+  const loadStats = useCallback(async () => {
+    try {
+      const res = await fetch('/api/purchase-board/stats')
+      if (res.status === 401) {
+        router.push('/login')
+        return
+      }
+      if (!res.ok) throw new Error('Failed to load stats')
+      setStats(await res.json())
+    } catch {
+      showToast('加载采购统计失败', 'error')
+    }
+  }, [router, showToast])
+
   useEffect(() => {
     loadItems()
-  }, [loadItems])
+    loadStats()
+  }, [loadItems, loadStats])
 
   const handleQuickUpdate = async (id: string, field: string, value: string) => {
     try {
@@ -166,6 +189,7 @@ function PurchaseBoardContent() {
       if (!res.ok) throw new Error('更新失败')
       showToast('状态更新成功', 'success')
       loadItems()
+      loadStats()
     } catch {
       showToast('状态更新失败', 'error')
     }
@@ -183,6 +207,7 @@ function PurchaseBoardContent() {
       showToast('归档成功', 'success')
       setArchiveItem(null)
       loadItems()
+      loadStats()
     } catch {
       showToast('归档失败', 'error')
     }
@@ -252,6 +277,7 @@ function PurchaseBoardContent() {
       setImportResult('')
       setImportErrors([])
       loadItems()
+      loadStats()
     } catch {
       showToast('导入请求失败', 'error')
     } finally {
@@ -275,9 +301,9 @@ function PurchaseBoardContent() {
     return acc
   }, {} as Record<string, ProcessItem[]>)
   const activeFilterCount = [filterOwnerId, filterRequesterId, filterSalesPersonId, filterStatus, filterPriority].filter(Boolean).length
-  const bossDecisionCount = items.filter(item => item.needBossDecision).length
-  const issueCount = items.filter(item => item.status === '异常' || item.status === '暂停').length
-  const amountTotal = items.reduce((sum, item) => sum + toAmount(item.purchaseAmount), 0)
+  const bossDecisionCount = stats?.bossDecisionCount ?? items.filter(item => item.needBossDecision).length
+  const issueCount = stats?.issueCount ?? items.filter(item => item.status === '异常' || item.status === '暂停').length
+  const amountTotal = stats?.amountTotal ?? items.reduce((sum, item) => sum + toAmount(item.purchaseAmount), 0)
 
   return (
     <WorkspaceMotion>
@@ -288,7 +314,7 @@ function PurchaseBoardContent() {
         description="按采购阶段横向推进事项，聚焦负责人、优先级、异常和老板决策阻塞项。"
         meta={
           <>
-            <StatusBadge tone="primary">事项 {items.length}</StatusBadge>
+            <StatusBadge tone="primary">事项 {stats?.totalCount ?? items.length}</StatusBadge>
             <StatusBadge tone={bossDecisionCount ? 'warning' : 'success'}>需决策 {bossDecisionCount}</StatusBadge>
           </>
         }
@@ -315,10 +341,10 @@ function PurchaseBoardContent() {
       <KpiStrip
         columns={4}
         items={[
-          { label: '采购事项', value: items.length, hint: '当前筛选结果', tone: 'primary' },
+          { label: '采购事项', value: stats?.totalCount ?? items.length, hint: '全量未归档事项', tone: 'primary' },
           { label: '需老板决策', value: bossDecisionCount, hint: '待拍板', tone: bossDecisionCount ? 'warning' : 'success' },
           { label: '异常/暂停', value: issueCount, hint: '需处理阻塞', tone: issueCount ? 'danger' : 'neutral' },
-          { label: '采购金额', value: formatCurrency(amountTotal), hint: '当前列表合计', tone: 'slate' },
+          { label: '采购金额', value: formatCurrency(amountTotal), hint: '全量未归档合计', tone: 'slate' },
         ]}
       />
 

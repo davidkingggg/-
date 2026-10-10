@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:./dev.db"
+  url      = env("DATABASE_URL")
 }
 
 model Category {
@@ -64,6 +64,9 @@ model Supplier {
   supplierDevelopmentProcess SupplierDevelopmentProcess[]
   riskTags                   SupplierRiskTag[]
   scores                     SupplierScore[]
+
+  @@index([categoryId])
+  @@index([isArchived])
 }
 
 model SupplierContact {
@@ -81,6 +84,8 @@ model SupplierContact {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   supplier   Supplier  @relation(fields: [supplierId], references: [id])
+
+  @@index([supplierId])
 }
 
 model Person {
@@ -123,6 +128,11 @@ model QuoteSheet {
   items       QuoteItem[]
   category    Category    @relation(fields: [categoryId], references: [id])
   supplier    Supplier    @relation(fields: [supplierId], references: [id])
+
+  @@index([categoryId])
+  @@index([supplierId])
+  @@index([quoteDate])
+  @@index([isArchived])
 }
 
 model QuoteItem {
@@ -150,6 +160,11 @@ model QuoteItem {
   category        Category   @relation(fields: [categoryId], references: [id])
   supplier        Supplier   @relation(fields: [supplierId], references: [id])
   quoteSheet      QuoteSheet @relation(fields: [quoteSheetId], references: [id])
+
+  @@index([compareKey])
+  @@index([categoryId])
+  @@index([supplierId])
+  @@index([quoteSheetId])
 }
 
 model SupplierScore {
@@ -177,6 +192,9 @@ model SupplierScore {
   scorer           Person   @relation(fields: [scorerId], references: [id])
   category         Category @relation(fields: [categoryId], references: [id])
   supplier         Supplier @relation(fields: [supplierId], references: [id])
+
+  @@index([categoryId])
+  @@index([supplierId])
 }
 
 model InvestigationRecord {
@@ -203,6 +221,9 @@ model InvestigationRecord {
   updatedAt         DateTime  @updatedAt
   category          Category  @relation(fields: [categoryId], references: [id])
   supplier          Supplier  @relation(fields: [supplierId], references: [id])
+
+  @@index([categoryId])
+  @@index([supplierId])
 }
 
 model SupplierDevelopmentProcess {
@@ -227,6 +248,9 @@ model SupplierDevelopmentProcess {
   owner               Person    @relation("DevOwner", fields: [ownerId], references: [id])
   category            Category  @relation(fields: [categoryId], references: [id])
   supplier            Supplier  @relation(fields: [supplierId], references: [id])
+
+  @@index([categoryId])
+  @@index([supplierId])
 }
 
 model PurchaseExecutionProcess {
@@ -270,6 +294,9 @@ model PurchaseExecutionProcess {
   requester           Person    @relation("PurchaseRequester", fields: [requesterId], references: [id])
   category            Category  @relation(fields: [categoryId], references: [id])
   supplier            Supplier  @relation(fields: [supplierId], references: [id])
+
+  @@index([categoryId])
+  @@index([supplierId])
 }
 
 model AdminTask {
@@ -321,6 +348,8 @@ model SalesMaterial {
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   category             Category  @relation(fields: [categoryId], references: [id])
+
+  @@index([categoryId])
 }
 
 model SystemSetting {
@@ -337,6 +366,7 @@ model User {
   passwordHash String
   name         String
   personId     String?  @unique
+  sessionVersion Int    @default(1)
   isAdmin      Boolean  @default(false)
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -393,6 +423,8 @@ model Attachment {
   isArchived  Boolean   @default(false)
   archivedAt  DateTime?
   createdAt   DateTime  @default(now())
+
+  @@index([relatedType, relatedId])
 }
 
 model RiskTag {

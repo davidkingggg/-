@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db'
 import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
 import {
   parseCSV,
+  getCSVRowNumber,
   parseBooleanOptional,
   parseDate,
   type RowError,
@@ -249,12 +250,13 @@ export async function POST(request: NextRequest) {
       for (const [header, idx] of Object.entries(headerIndex)) {
         raw[header] = rows[i][idx] ?? ''
       }
-      const result = parseRow(raw, i + 2, csvInternalNames, errors)
+      const rowNum = getCSVRowNumber(rows[i], i + 2)
+      const result = parseRow(raw, rowNum, csvInternalNames, errors)
       if (result) {
         // 检查系统已有同名供应商
         if (existingNames.has(result.name)) {
           errors.push({
-            row: i + 2,
+            row: rowNum,
             field: '供应商名称',
             value: result.name,
             reason: `供应商「${result.name}」已存在`,

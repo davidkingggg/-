@@ -40,12 +40,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!existing) {
       return NextResponse.json({ error: 'Agent Token 不存在' }, { status: 404 })
     }
+    if (body.isActive && existing.revokedAt) {
+      return NextResponse.json({ error: '已撤销的 Agent Token 不能直接重新启用，请使用重置生成新 Token' }, { status: 400 })
+    }
 
     const token = await prisma.agentApiToken.update({
       where: { id },
       data: {
         isActive: body.isActive,
-        revokedAt: body.isActive ? null : new Date(),
+        revokedAt: body.isActive ? existing.revokedAt : existing.revokedAt ?? new Date(),
       },
       select: tokenSelect,
     })

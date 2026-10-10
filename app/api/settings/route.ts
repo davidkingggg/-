@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { getCurrentUser, requireAdmin } from '@/lib/auth-utils'
+import { getCurrentUser } from '@/lib/auth-utils'
+import { requireSessionAdminForDestructive } from '@/lib/session-admin-auth'
 
 export async function GET() {
   try {
@@ -18,7 +19,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    await requireAdmin()
+    await requireSessionAdminForDestructive()
 
     const body = await request.json()
     const items = body.items as Array<{ id: string; value: string; notes?: string }>
@@ -47,8 +48,9 @@ export async function PUT(request: Request) {
     const updated = await prisma.systemSetting.findMany({ orderBy: { key: 'asc' } })
     return NextResponse.json(updated)
   } catch (error) {
-    if (error instanceof Error && error.message === '需要管理员权限') {
-      return NextResponse.json({ error: error.message }, { status: 403 })
+    if (error instanceof Error && (error.message === '未登录' || error.message === '需要管理员权限')) {
+      const status = error.message === '未登录' ? 401 : 403
+      return NextResponse.json({ error: error.message }, { status })
     }
     return NextResponse.json({ error: '更新系统设置失败' }, { status: 500 })
   }

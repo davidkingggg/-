@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { Prisma } from '@prisma/client'
 import { AUTH_ERROR, isAuthError, requireUser } from '@/lib/auth-utils'
+
+const MAX_PAGE_SIZE = 100
+
+function parsePagination(searchParams: URLSearchParams) {
+  const rawPage = searchParams.get('page')
+  const rawPageSize = searchParams.get('pageSize')
+  if (!rawPage && !rawPageSize) return null
+
+  const page = Math.max(1, Number.parseInt(rawPage || '1', 10) || 1)
+  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number.parseInt(rawPageSize || '20', 10) || 20))
+  return { page, pageSize, skip: (page - 1) * pageSize }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,16 +21,35 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const isPriority = searchParams.get('isPriority')
     const type = searchParams.get('type')
+    const pagination = parsePagination(searchParams)
 
-    const where: Record<string, unknown> = { isArchived: false }
+    const where: Prisma.CategoryWhereInput = { isArchived: false }
     if (isPriority === 'true') where.isPriority = true
     if (isPriority === 'false') where.isPriority = false
     if (type) where.type = type
 
-    const categories = await prisma.category.findMany({
+    const query = {
       where,
-      orderBy: { createdAt: 'desc' },
-    })
+      orderBy: { createdAt: 'desc' as const },
+      ...(pagination ? { skip: pagination.skip, take: pagination.pageSize } : {}),
+    }
+    const [categories, total] = pagination
+      ? await prisma.$transaction([
+          prisma.category.findMany(query),
+          prisma.category.count({ where }),
+        ])
+      : [await prisma.category.findMany(query), null]
+    if (pagination) {
+      return NextResponse.json({
+        items: categories,
+        pagination: {
+          page: pagination.page,
+          pageSize: pagination.pageSize,
+          total,
+          totalPages: Math.ceil((total ?? 0) / pagination.pageSize),
+        },
+      })
+    }
     return NextResponse.json(categories)
   } catch (error) {
     if (isAuthError(error)) {

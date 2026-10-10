@@ -67,11 +67,20 @@ const checks: Check[] = [
   {
     name: 'dangerous backup interfaces require admin',
     run: () => {
-      ;['app/api/backups/route.ts', 'app/api/backups/restore/route.ts'].forEach((relativePath) => {
-        const source = read(relativePath)
-        assertIncludes(source, 'requireAdmin', `${relativePath} must import or call requireAdmin`)
-        assert(/await\s+requireAdmin\(\)/.test(source), `${relativePath} must await requireAdmin() before doing backup work`)
-      })
+      const backupSource = read('app/api/backups/route.ts')
+      assertIncludes(backupSource, 'requireAdmin', 'app/api/backups/route.ts must import or call requireAdmin')
+      assert(/await\s+requireAdmin\(\)/.test(backupSource), 'app/api/backups/route.ts must await requireAdmin() before doing backup work')
+
+      const restoreSource = read('app/api/backups/restore/route.ts')
+      assertIncludes(
+        restoreSource,
+        'requireSessionAdminForDestructive',
+        'app/api/backups/restore/route.ts must require session-only admin for destructive restore work'
+      )
+      assert(
+        /await\s+requireSessionAdminForDestructive\(\)/.test(restoreSource),
+        'app/api/backups/restore/route.ts must await requireSessionAdminForDestructive() before restoring data'
+      )
     },
   },
   {

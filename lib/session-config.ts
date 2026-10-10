@@ -10,20 +10,38 @@ export interface SessionData {
   isAdmin?: boolean
   personId?: string
   personName?: string
+  sessionVersion?: number
 }
+
+const DEV_FALLBACK_SECRET = 'local-dev-only-change-this-in-production-32chars!!'
 
 export function getSessionPassword(): string {
   const password = process.env.SESSION_PASSWORD
-  if (process.env.NODE_ENV === 'production' && !password) {
-    throw new Error('SESSION_PASSWORD environment variable is required in production')
+  if (password) {
+    if (password.length < 32) {
+      throw new Error('SESSION_PASSWORD must be at least 32 characters')
+    }
+    return password
   }
-  return password || 'local-dev-only-change-this-in-production-32chars!!'
+  // 开发模式必须显式开启才允许用回退密钥
+  if (process.env.ALLOW_DEV_SESSION_SECRET === 'true') {
+    return DEV_FALLBACK_SECRET
+  }
+  throw new Error(
+    'SESSION_PASSWORD is required. Set it in .env or environment. ' +
+    'For local dev, also set ALLOW_DEV_SESSION_SECRET=true.'
+  )
 }
 
 function shouldUseSecureCookies(): boolean {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL
-  if (appUrl) return appUrl.startsWith('https://')
-  return process.env.NODE_ENV === 'production' && process.env.FORCE_SECURE_COOKIES === 'true'
+  if (appUrl && appUrl.startsWith('https://')) return true
+  // 生产环境默认安全，除非显式关闭
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.FORCE_SECURE_COOKIES !== 'false'
+  }
+  // 本地开发：显式开启才安全
+  return process.env.FORCE_SECURE_COOKIES === 'true'
 }
 
 export function getSessionOptions(): SessionOptions {

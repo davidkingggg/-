@@ -2,6 +2,7 @@ import { constants } from 'fs'
 import { access, readFile, realpath, stat } from 'fs/promises'
 import path from 'path'
 import { PrismaClient } from '@prisma/client'
+import { prisma as sharedPrisma } from './db'
 
 export interface DatabaseStatus {
   exists: boolean
@@ -123,7 +124,11 @@ export async function resolveSqliteDatabasePath(databaseUrl?: string) {
 
   const decodedPath = decodeURIComponent(sqlitePath)
   if (path.isAbsolute(decodedPath)) return path.normalize(decodedPath)
-  return path.resolve(/* turbopackIgnore: true */ process.cwd(), decodedPath)
+  const cwdPath = path.resolve(/* turbopackIgnore: true */ process.cwd(), decodedPath)
+  if (await pathExists(cwdPath)) return cwdPath
+  const prismaRelativePath = path.resolve(/* turbopackIgnore: true */ process.cwd(), 'prisma', decodedPath)
+  if (await pathExists(prismaRelativePath)) return prismaRelativePath
+  return cwdPath
 }
 
 export async function getJournalFiles(databasePath: string) {
@@ -160,7 +165,16 @@ export async function getDatabaseStatus(databasePath?: string): Promise<Database
 }
 
 async function withPrismaForDatabase<T>(databasePath: string, action: (client: PrismaClient) => Promise<T>) {
-  const url = `file:${path.resolve(/* turbopackIgnore: true */ databasePath).replace(/\\/g, '/')}`
+  const resolvedPath = path.resolve(/* turbopackIgnore: true */ databasePath).replace(/\\/g, '/')
+
+  // 优先使用共享单例客户端（路径匹配时），避免每次请求创建新连接
+  const sharedDbPath = (await resolveSqliteDatabasePath().catch(() => '')).replace(/\\/g, '/')
+  if (sharedDbPath && resolvedPath === sharedDbPath) {
+    return action(sharedPrisma)
+  }
+
+  // 路径不匹配时才创建临时客户端
+  const url = `file:${resolvedPath}`
   const client = new PrismaClient({
     datasources: {
       db: { url },

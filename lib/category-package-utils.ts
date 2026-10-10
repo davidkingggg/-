@@ -96,6 +96,8 @@ export interface CategoryPackageData {
   materials: MaterialInfo[]
   decisions: DecisionInfo[]
   generatedAt: string
+  /** 是否包含内部备注（由调用方控制） */
+  includeNotes: boolean
 }
 
 function fmtDate(d: Date): string {
@@ -251,8 +253,8 @@ export async function buildCategoryPackage(filter: PackageFilter): Promise<Categ
       priority: d.priority,
       status: d.status,
       dueDate: d.dueDate ? fmtDate(d.dueDate) : null,
-      currentProblem: d.currentProblem,
-      nextAction: d.nextAction,
+      currentProblem: includeNotes ? d.currentProblem : null,
+      nextAction: includeNotes ? d.nextAction : null,
     })),
     ...purchaseDecisions.map((p) => ({
       id: p.id,
@@ -264,8 +266,8 @@ export async function buildCategoryPackage(filter: PackageFilter): Promise<Categ
       priority: p.priority,
       status: p.status,
       dueDate: p.dueDate ? fmtDate(p.dueDate) : null,
-      currentProblem: p.currentProblem,
-      nextAction: p.nextAction,
+      currentProblem: includeNotes ? p.currentProblem : null,
+      nextAction: includeNotes ? p.nextAction : null,
     })),
   ].sort((a, b) => {
     const pOrder = { '高': 0, '中': 1, '低': 2 }
@@ -303,15 +305,17 @@ export async function buildCategoryPackage(filter: PackageFilter): Promise<Categ
     decisions: decisions.map((d) => ({
       ...d,
       currentProblem: includeNotes ? d.currentProblem : null,
+      nextAction: includeNotes ? d.nextAction : null,
     })),
     generatedAt: new Date().toISOString(),
+    includeNotes: includeNotes ?? false,
   }
 }
 
 export function buildCategoryPackageMarkdown(data: CategoryPackageData): string {
   const lines: string[] = []
-  const { category, stats, suppliers, quotes, scores, materials, decisions } = data
-  const includeNotes = data.materials.length > 0 ? data.materials[0].coreSellingPoints !== null || true : false
+  const { category, stats, suppliers, quotes, scores, materials, decisions, includeNotes } = data
+  const cell = (value: unknown) => String(value ?? '-').replace(/\r?\n/g, ' ').replace(/\|/g, '\\|')
 
   lines.push(`# ${category.name} — 商务支持资料包`)
   lines.push('')
@@ -337,7 +341,7 @@ export function buildCategoryPackageMarkdown(data: CategoryPackageData): string 
     overviewRows.push(['品类备注', category.notes])
   }
   for (const [k, v] of overviewRows) {
-    lines.push(`| ${k} | ${v} |`)
+    lines.push(`| ${cell(k)} | ${cell(v)} |`)
   }
   lines.push('')
 
@@ -353,7 +357,7 @@ export function buildCategoryPackageMarkdown(data: CategoryPackageData): string 
     lines.push('| 供应商 | 所在地区 | 公司性质 | 合作意愿 | 价格水平 | 已报价 | 已考察 |')
     lines.push('|--------|------|----------|----------|----------|--------|--------|')
     for (const s of group) {
-      lines.push(`| ${s.name} | ${s.region || '-'} | ${s.companyType || '-'} | ${s.cooperationWillingness || '-'} | ${s.priceLevel || '-'} | ${s.hasQuoted ? '是' : '否'} | ${s.hasVisited ? '是' : '否'} |`)
+      lines.push(`| ${cell(s.name)} | ${cell(s.region || '-')} | ${cell(s.companyType || '-')} | ${cell(s.cooperationWillingness || '-')} | ${cell(s.priceLevel || '-')} | ${cell(s.hasQuoted ? '是' : '否')} | ${cell(s.hasVisited ? '是' : '否')} |`)
     }
     lines.push('')
   }
@@ -367,7 +371,7 @@ export function buildCategoryPackageMarkdown(data: CategoryPackageData): string 
     lines.push('| 编号 | 供应商 | 日期 | 阶段 | 来源 | 明细数 | 最低价 | 附件数 |')
     lines.push('|------|--------|------|------|------|--------|--------|--------|')
     for (const q of quotes) {
-      lines.push(`| ${q.quoteNumber || '-'} | ${q.supplierName} | ${q.quoteDate} | ${q.quoteStage || '-'} | ${q.sourceType || '-'} | ${q.itemCount} | ${q.minPrice != null ? q.minPrice.toFixed(2) : '-'} | ${q.attachmentCount} |`)
+      lines.push(`| ${cell(q.quoteNumber || '-')} | ${cell(q.supplierName)} | ${cell(q.quoteDate)} | ${cell(q.quoteStage || '-')} | ${cell(q.sourceType || '-')} | ${cell(q.itemCount)} | ${cell(q.minPrice != null ? q.minPrice.toFixed(2) : '-')} | ${cell(q.attachmentCount)} |`)
     }
   }
   lines.push('')
@@ -385,13 +389,13 @@ export function buildCategoryPackageMarkdown(data: CategoryPackageData): string 
   for (const s of scores) {
     const supplier = suppliers.find((sup) => sup.id === s.supplierId)
     const tags = supplier?.riskTags?.join('；') || '-'
-    lines.push(`| ${s.supplierName} | ${s.totalScore != null ? s.totalScore.toFixed(1) : '-'} | ${s.finalLevel || '-'} | ${s.scoreDate} | ${s.scorerName} | ${tags} |`)
+    lines.push(`| ${cell(s.supplierName)} | ${cell(s.totalScore != null ? s.totalScore.toFixed(1) : '-')} | ${cell(s.finalLevel || '-')} | ${cell(s.scoreDate)} | ${cell(s.scorerName)} | ${cell(tags)} |`)
   }
   for (const id of unscoredIds) {
     const supplier = suppliers.find((sup) => sup.id === id)
     if (!supplier) continue
     const tags = supplier.riskTags?.join('；') || '-'
-    lines.push(`| ${supplier.name} | - | - | - | - | ${tags} |`)
+    lines.push(`| ${cell(supplier.name)} | - | - | - | - | ${cell(tags)} |`)
   }
   if (includeNotes) {
     for (const s of suppliers) {
@@ -434,7 +438,7 @@ export function buildCategoryPackageMarkdown(data: CategoryPackageData): string 
     lines.push('|------|------|--------|--------|--------|------|----------|--------|')
     for (const d of decisions) {
       const next = includeNotes ? (d.nextAction || '-') : '-'
-      lines.push(`| ${d.sourceLabel} | ${d.title} | ${d.supplierName} | ${d.ownerName} | ${d.priority || '-'} | ${d.status} | ${d.dueDate || '-'} | ${next} |`)
+      lines.push(`| ${cell(d.sourceLabel)} | ${cell(d.title)} | ${cell(d.supplierName)} | ${cell(d.ownerName)} | ${cell(d.priority || '-')} | ${cell(d.status)} | ${cell(d.dueDate || '-')} | ${cell(next)} |`)
     }
   }
   lines.push('')

@@ -184,7 +184,7 @@ export default function AgentTokensPage() {
                         token.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
                       }`}
                     >
-                      {token.isActive ? '启用中' : '已停用'}
+                      {token.isActive ? '启用中' : token.revokedAt ? '已撤销' : '已停用'}
                     </span>
                   </td>
                   <td className="h-[58px] px-4 text-[14px] text-gray-500">{formatDateTime(token.lastUsedAt)}</td>
@@ -194,13 +194,15 @@ export default function AgentTokensPage() {
                         <RefreshCw size={14} />
                         重置
                       </button>
-                      <button
-                        onClick={() => toggleToken(token)}
-                        className={token.isActive ? 'inline-flex items-center gap-1 text-red-600 hover:text-red-800' : 'inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-800'}
-                      >
-                        <ShieldOff size={14} />
-                        {token.isActive ? '停用' : '启用'}
-                      </button>
+                      {!token.revokedAt && (
+                        <button
+                          onClick={() => toggleToken(token)}
+                          className={token.isActive ? 'inline-flex items-center gap-1 text-red-600 hover:text-red-800' : 'inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-800'}
+                        >
+                          <ShieldOff size={14} />
+                          {token.isActive ? '停用' : '启用'}
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
-import { ADMIN_ERROR, hashPassword, isAdminError, requireAdmin, validatePasswordPolicy } from '@/lib/auth-utils'
+import { ADMIN_ERROR, AUTH_ERROR, hashPassword, isAdminError, isAuthError, requireAdmin, validatePasswordPolicy } from '@/lib/auth-utils'
+import { requireSessionAdminForDestructive } from '@/lib/session-admin-auth'
 import { normalizePersonIdInput, validatePersonBinding } from '@/lib/user-person-binding'
 
 function normalizeText(value: unknown): string {
@@ -25,6 +26,9 @@ export async function GET() {
     })
     return NextResponse.json(users)
   } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     if (isAdminError(error)) {
       return NextResponse.json({ error: ADMIN_ERROR }, { status: 403 })
     }
@@ -34,7 +38,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin()
+    await requireSessionAdminForDestructive()
     const body = await request.json()
     const username = normalizeText(body.username)
     const password = normalizeText(body.password)
@@ -78,6 +82,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(user, { status: 201 })
   } catch (error) {
+    if (isAuthError(error)) {
+      return NextResponse.json({ error: AUTH_ERROR }, { status: 401 })
+    }
     if (isAdminError(error)) {
       return NextResponse.json({ error: ADMIN_ERROR }, { status: 403 })
     }
