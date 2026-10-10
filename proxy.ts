@@ -32,8 +32,13 @@ function isPublicApi(pathname: string) {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  if (pathname.startsWith('/_next') || pathname.startsWith('/__nextjs')) {
+    return NextResponse.next()
+  }
+
   const session = await readSession(request)
-  const isAuthenticated = Boolean(session?.userId)
+  const isAuthenticated = Boolean(session?.userId && typeof session?.sessionVersion === 'number')
   const authorization = request.headers.get('authorization')
   const bearerPrefix = 'Bearer '
   const hasAgentBearer = Boolean(
@@ -45,7 +50,11 @@ export async function proxy(request: NextRequest) {
     if (isAuthenticated) {
       return NextResponse.redirect(new URL('/', request.url))
     }
-    return NextResponse.next()
+    const response = NextResponse.next()
+    if (request.cookies.has(SESSION_COOKIE_NAME)) {
+      response.cookies.delete(SESSION_COOKIE_NAME)
+    }
+    return response
   }
 
   if (isPublicApi(pathname)) {
@@ -64,12 +73,20 @@ export async function proxy(request: NextRequest) {
   }
 
   if (pathname.startsWith('/api/')) {
-    return NextResponse.json({ error: '未登录' }, { status: 401 })
+    const response = NextResponse.json({ error: '未登录' }, { status: 401 })
+    if (request.cookies.has(SESSION_COOKIE_NAME)) {
+      response.cookies.delete(SESSION_COOKIE_NAME)
+    }
+    return response
   }
 
-  return NextResponse.redirect(new URL('/login', request.url))
+  const redirectResponse = NextResponse.redirect(new URL('/login', request.url))
+  if (request.cookies.has(SESSION_COOKIE_NAME)) {
+    redirectResponse.cookies.delete(SESSION_COOKIE_NAME)
+  }
+  return redirectResponse
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)'],
+  matcher: ['/((?!_next/|__nextjs|favicon.ico|.*\\..*).*)'],
 }

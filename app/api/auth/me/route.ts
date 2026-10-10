@@ -5,10 +5,13 @@ import { getSession } from '@/lib/session'
 export async function GET() {
   try {
     const user = await getCurrentUser()
+    const session = await getSession()
     if (!user) {
+      if (session.userId) {
+        session.destroy()
+      }
       return NextResponse.json({ error: '未登录' }, { status: 401 })
     }
-    const session = await getSession()
     const nextPersonId = user.personId || null
     const nextPersonName = user.person?.name || null
     const currentPersonId = session.personId || null
